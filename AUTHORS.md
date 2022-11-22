@@ -6,4 +6,5 @@
 
 ## Contributors
 
-None yet. Why not be the first?
+- Claire Merker <claire.merker@meteoswiss.ch>
+- Daniel Regenass <daniel.regenass@meteoswiss.ch>
