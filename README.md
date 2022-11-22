@@ -23,6 +23,8 @@ pip install --editable .
 ```
 *Warning:* Make sure you use the right pip, i.e. the one from the installed conda environment (`which pip` should point to something like `path/to/miniconda/envs/<package_env_name>/bin/pip`).
 
+Since this package uses cfgrib to decode GRIB data, make sure to run `setup_grib_env.sh` with your conda environment active to setup ecCodes correctly.
+
 Once your package is installed, run the tests by typing
 ```
 pytest
