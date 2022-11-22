@@ -1,24 +1,26 @@
 """Read GRIB files."""
-import glob
-import os
+# Standard library
 import logging
 import time
-import sys
-import xarray as xr
-from typing import List, Dict, Any, Mapping
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Mapping
 
-from dask.distributed import Client, LocalCluster
+# Third-party
+import xarray as xr
+from dask.distributed import Client
+from dask.distributed import LocalCluster
 from dask.distributed import performance_report
 
 
 def var_from_files(
     filelist: List[str],
     varname: str,
-    key_filt: Dict[str, str] = {},
     parallel: bool = False,
     chunks: Dict[str, int] | None = None,
     dask_nworkers: int | None = None,
-    ) -> xr.DataArray:
+) -> xr.DataArray:
     """Read a variable from GRIB file(s) into an xarray.DataArray.
 
     Parameters
@@ -27,8 +29,6 @@ def var_from_files(
         list of files to read
     varname : str
         GRIB shortName of variable to extract
-    key_filt : Dict(str, str)
-        keys for filtering of GRIB messages additional to the shortName filter
     parallel : bool, optional
         parallelise the reading with dask.
     chunks : Dict(str, int)
@@ -43,14 +43,14 @@ def var_from_files(
 
     """
     # define arguments for open_mfdataset and the cfgrib engine
-    key_filt["shortName"] = varname
     backend_kwargs = {
         "indexpath": "",
         "errors": "ignore",
-        "filter_by_keys": key_filt,
-
+        "filter_by_keys": {"shortName": varname},
     }
-    kwargs: Mapping[str, Any] = {  # type needed to avoid mypy arg-type error in open_mfdataset
+    kwargs: Mapping[
+        str, Any
+    ] = {  # type needed to avoid mypy arg-type error in open_mfdataset
         "engine": "cfgrib",
         "chunks": chunks,
         "backend_kwargs": backend_kwargs,
@@ -65,7 +65,9 @@ def var_from_files(
 
         u_id = time.time()
         dask_report = f"dask-report-{u_id}.html"
-        logging.info(f"dask report is being prepared: {dask_report}, {client.dashboard_link}")
+        logging.info(
+            "dask report is being prepared: %s, %s", dask_report, client.dashboard_link
+        )
 
         with performance_report(filename=dask_report):
             ds = xr.open_mfdataset(
@@ -73,15 +75,11 @@ def var_from_files(
                 concat_dim="time",
                 combine="nested",
                 parallel=parallel,
-                **kwargs
+                **kwargs,
             )
     else:
         ds = xr.open_mfdataset(
-            filelist,
-            concat_dim="time",
-            combine="nested",
-            parallel=parallel,
-            **kwargs
+            filelist, concat_dim="time", combine="nested", parallel=parallel, **kwargs
         )
 
     da = ds[varname]
