@@ -3,9 +3,11 @@ channels:
   - defaults
 dependencies:
   - python>=3.10
-  - pip
+  - dask
+  - cfgrib
   - click
-  - pytest
   - pip
+  - pytest
+  - xarray
   - pip:
     # add pip requirements here if needed.
