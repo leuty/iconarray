@@ -6,6 +6,8 @@ dependencies:
   - dask
   - cfgrib
   - click
+  - matplotlib
+  - netCDF4
   - pip
   - pytest
   - xarray
