@@ -37,6 +37,10 @@ include = ["*"]
 exclude = []
 namespaces = false
 
+# resources to include
+[tool.setuptools.package-data]
+resources = ["*.yaml"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = [

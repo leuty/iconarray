@@ -69,25 +69,57 @@ class IconGrid(mtri.Triangulation):
             a sequence of (x, y [,z]) numeric coordinate pairs or triples, or an
             array-like with shape (N, 2) or (N, 3). Also can be a sequence of Point
             objects.
-            default is domain Switzerland
-
-        Notes
-        -----
-        A quick performance test showed that matplotlib.path.Path.contains_point()
-        is faster than shapely.geometry.polygon.Polygon.contains()
+            default is domain is a box around Switzerland
 
         """
-        mask = np.full([self.ncells], False)
-        # define closed domain
-        domain_polygon = mpath.Path(shell)
-        # test points
         points = np.stack([self.cx, self.cy], axis=1)
-        for i, pt in enumerate(points):
-            mask[i] = domain_polygon.contains_point(pt)
+        mask = points_in_domain(points, shell)
         # included in domain => mask inactive
         mask = ~mask
 
         self.set_mask(mask)
+
+
+# pylint: disable=dangerous-default-value
+def points_in_domain(
+    points: np.ndarray,
+    shell: Sequence = [[5.75, 45.7], [5.75, 48.0], [10.8, 48.0], [10.8, 45.7]],
+) -> np.ndarray:
+    """Test if points are contained in a domain.
+
+    Mask is False when points are outside of the domain.
+
+    Parameters
+    ----------
+    points : np.ndarray
+        The points (x,y) to check. Shape (n,2)
+    shell : sequence, optional
+        a sequence of (x, y [,z]) numeric coordinate pairs or triples, or an
+        array-like with shape (N, 2) or (N, 3). Also can be a sequence of Point
+        objects.
+        default is domain is a bos around Switzerland
+
+    Returns
+    -------
+    mask : np.ndarray
+        mask defining if points are inside (True) or outside (False) of the domain.
+
+    Notes
+    -----
+    A quick performance test showed that matplotlib.path.Path.contains_point()
+    is faster than shapely.geometry.polygon.Polygon.contains()
+
+    """
+    mask = np.full(points.shape[0], False)
+    # define closed domain
+    domain_polygon = mpath.Path(shell)
+    # test points
+    for i, pt in enumerate(points):
+        mask[i] = domain_polygon.contains_point(pt)
+    return mask
+
+
+# pylint: enable=dangerous-default-value
 
 
 def get_grid(gridfile: str) -> IconGrid:

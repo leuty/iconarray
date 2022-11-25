@@ -36,4 +36,6 @@ def test_mask_grid():
     """Test the mask generation for the Swiss domain."""
     gd = get_grid(gridfile)
     gd.mask_domain()
-    assert sum(gd.mask) == 933016, "the Swiss domain should contain 933016 points"
+    # pylint: disable=invalid-unary-operand-type
+    assert sum(~gd.mask) == 95156, "the Swiss domain should contain 95156 points"
+    # pylint: enable=invalid-unary-operand-type
