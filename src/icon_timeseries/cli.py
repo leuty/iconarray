@@ -76,7 +76,7 @@ def main(ctx, **kwargs) -> None:
     type=int,
     help="ignored if the script does not run on a post-proc node",
 )
-def avg(
+def meanmax(
     filepattern: str,
     varname: str,
     level: int,

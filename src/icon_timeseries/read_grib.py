@@ -15,6 +15,10 @@ from dask.distributed import LocalCluster
 from dask.distributed import performance_report
 
 
+# keep attributes on xarray Datasets and DataArrays
+xr.set_options(keep_attrs=True)
+
+
 # pylint: disable=too-many-arguments
 def var_from_files(
     filelist: List[str],

@@ -92,7 +92,7 @@ def prepare_data(
                 da.attrs["GRIB_gridType"]
             )
             sys.exit()
-    #import pdb; pdb.set_trace()
+
     # read the data
     tstart = time.perf_counter()
     da = var_from_files(
@@ -126,11 +126,11 @@ def prepare_data(
 
     # compute average and maximum
     if da.attrs["GRIB_gridType"] == "rotated_ll":
-        da_mean = da.mean(dim=["x", "y"], skipna=True, keep_attrs=True).compute()
-        da_max = da.max(dim=["x", "y"], skipna=True, keep_attrs=True).compute()
+        da_mean = da.mean(dim=["x", "y"], skipna=True).compute()
+        da_max = da.max(dim=["x", "y"], skipna=True).compute()
     else:
-        da_mean = da.mean(dim="values", skipna=True, keep_attrs=True).compute()
-        da_max = da.max(dim="values", skipna=True, keep_attrs=True).compute()
+        da_mean = da.mean(dim="values", skipna=True).compute()
+        da_max = da.max(dim="values", skipna=True).compute()
 
     return da_mean, da_max
 
@@ -153,12 +153,14 @@ def plot_mean_max(da_mean: xr.DataArray, da_max: xr.DataArray, domain: str):
     plot_ts(
         da_mean,
         ax=axs[0],
-        title=f"{da_mean.name} mean for {domain}, level {da_mean.level}"
+        title=f"{da_mean.name} mean ({da_mean.GRIB_stepType}, {da_mean.GRIB_units}) "
+              f"for {domain}, level {da_mean.level}"
     )
     plot_ts(
         da_max,
         ax=axs[1],
-        title=f"{da_max.name} maximum for {domain}, level {da_max.level}"
+        title=f"{da_max.name} maximum ({da_mean.GRIB_stepType}, {da_mean.GRIB_units}) "
+              f"for {domain}, level {da_max.level}"
     )
 
     axs[0].xaxis.set_ticklabels([])
