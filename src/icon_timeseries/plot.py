@@ -1,23 +1,28 @@
 """Plot time series."""
+# Standard library
 import logging
-import pkg_resources
-import time
 import sys
-import yaml
-import matplotlib  # type: ignore
-import matplotlib.pyplot as plt  # type: ignore
-import matplotlib.dates as mdates  # type: ignore
-import numpy as np
-import xarray as xr
+import time
 from typing import Any
 from typing import Dict
 from typing import List
-from typing import Tuple, Union
-from typing import Sequence
+from typing import Tuple
+
+# Third-party
+import matplotlib  # type: ignore
+import matplotlib.pyplot as plt  # type: ignore
+import numpy as np
+import xarray as xr
+
+# Local
+from .handle_grid import get_domain
+from .handle_grid import get_grid
+from .handle_grid import IconGrid
+from .handle_grid import points_in_domain
 from .read_grib import var_from_files
-from .handle_grid import get_grid, points_in_domain
 
 
+# pylint: disable=too-many-arguments, too-many-locals
 def prepare_data(
     filelist: List[str],
     varname: str,
@@ -26,7 +31,7 @@ def prepare_data(
     domain: str = "all",
     chunks: Dict[str, int] | None = None,
     dask_nworkers: int | None = None,
-) -> Tuple[xr.DataArray, xr.DataArray]:  # pylint: disable=too-many-arguments
+) -> Tuple[xr.DataArray, xr.DataArray]:
     """Get the domain average and domain maximum of a model quantity.
 
     Parameters
@@ -56,17 +61,9 @@ def prepare_data(
     """
     # get domain
     if domain != "all":
-        # user-defined domain
-        with pkg_resources.resource_stream("resources", "domains.yaml") as handle:
-            avail_domains = yaml.safe_load(handle.read())
-        try:
-            domain_pts = avail_domains[domain]["points"]
-        except KeyError:
-            logging.error(
-                "domain '%s' is not defined. add it to "
-                "src/resources/domains.yaml and reinstall the package")
-            sys.exit()
+        dom_pts, _ = get_domain(domain)
 
+        logging.info("read grid file and check if grid is compatible")
         # check if gridfile is needed on first file
         da = var_from_files(
             [filelist[0]],
@@ -74,7 +71,7 @@ def prepare_data(
             level,
             parallel=True,
             chunks=chunks,
-            dask_nworkers=dask_nworkers
+            dask_nworkers=dask_nworkers,
         )
         if da.attrs["GRIB_gridType"] == "unstructured" and not gridfile:
             logging.error("the data grid is unstructured, please provide a grid file!")
@@ -89,7 +86,7 @@ def prepare_data(
         elif da.attrs["GRIB_gridType"] not in ["unstructured_grid", "rotated_ll"]:
             logging.error(
                 "no support for domain selection on grid type %s",
-                da.attrs["GRIB_gridType"]
+                da.attrs["GRIB_gridType"],
             )
             sys.exit()
 
@@ -101,7 +98,7 @@ def prepare_data(
         level,
         parallel=True,
         chunks=chunks,
-        dask_nworkers=dask_nworkers
+        dask_nworkers=dask_nworkers,
     )
     tend = time.perf_counter()
     telapsed = tend - tstart
@@ -111,18 +108,17 @@ def prepare_data(
         # apply the domain mask
         if da.attrs["GRIB_gridType"] == "rotated_ll":
             points = np.stack(
-                [da.longitude.values.flatten(), da.latitude.values.flatten()],
-                axis=1
+                [da.longitude.values.flatten(), da.latitude.values.flatten()], axis=1
             )
-            mask = points_in_domain(points, domain_pts)
+            mask = points_in_domain(points, dom_pts)
             # apply domain mask
             da = da.where(mask.reshape(da.longitude.values.shape))
 
         elif da.attrs["GRIB_gridType"] == "unstructured_grid":
             # mask grid points outside of the domain
-            gd.mask_domain(domain_pts)
+            gd.mask_domain(dom_pts)
             # apply domain mask
-            da = da.where(~ gd.mask)
+            da = da.where(~gd.mask)  # pylint: disable=invalid-unary-operand-type
 
     # compute average and maximum
     if da.attrs["GRIB_gridType"] == "rotated_ll":
@@ -135,54 +131,79 @@ def prepare_data(
     return da_mean, da_max
 
 
-def plot_mean_max(da_mean: xr.DataArray, da_max: xr.DataArray, domain: str):
-    """Plot the time series of the domain average and domain maximum.
+# pylint: enable=too-many-arguments, too-many-locals
+
+
+def plot_ts_multiple(
+    da_dict: Dict[str, Dict[str, xr.DataArray]],
+    domain: str | None = None,
+    save: bool = True,
+) -> matplotlib.figure.Figure:
+    """Plot the time series of parameters defined on a domain.
 
     Parameters
     ----------
-    da_mean : xarray.DataArray
-        domain average. the dimension has to be 'time'
-    da_max : xarray.DataArray
-        domain maximum. the dimension has to be 'time'
-    domain : str
-        name of the domain fot the plot title
+    da_dict : Dict[str, Dict[str, xarray.DataArray]]
+        dictionary holding the data {"param": {"expid": xarray.DataArray}}. the
+        dimension of the xarray.DataArray has to be 'time'
+    domain : str, optional
+        name of the domain for the plot title
+    save : bool, optional
+        save the figure
+
+    Returns
+    -------
+    fig : matplotlib.figure.Figure
+        figure object
 
     """
-    _, axs = plt.subplots(2)
+    fig, axs = plt.subplots(len(da_dict))
 
-    plot_ts(
-        da_mean,
-        ax=axs[0],
-        title=f"{da_mean.name} mean ({da_mean.GRIB_stepType}, {da_mean.GRIB_units}) "
-              f"for {domain}, level {da_mean.level}"
-    )
-    plot_ts(
-        da_max,
-        ax=axs[1],
-        title=f"{da_max.name} maximum ({da_mean.GRIB_stepType}, {da_mean.GRIB_units}) "
-              f"for {domain}, level {da_max.level}"
-    )
+    for i, (p_key, p_val) in enumerate(da_dict.items()):
+        e_val = xr.DataArray()
+        for e_key, e_val in p_val.items():
+            logging.info("plotting for parameter %s, exp %s", p_key, e_key)
+            # get values and time information
+            vals = e_val.values
+            try:
+                time_vals = e_val.valid_time.values
+            except AttributeError:
+                time_vals = e_val.time.values
+            # plot
+            plot_ts(vals, time_vals, ax=axs[i], label=e_key)
+        # set title and legend
+        axs[i].set_title(
+            f"{e_val.name} {p_key} ({e_val.GRIB_stepType}, {e_val.GRIB_units}) "
+            f"for {domain}, level {e_val.level}"
+        )
+        axs[i].legend()
 
     axs[0].xaxis.set_ticklabels([])
 
-    fname = f"timeseries_{da_mean.name}_meanmax.png"
-    plt.savefig(fname, bbox_inches="tight", dpi=300)
-    logging.info(f"saved figure {fname}")
+    if save:
+        fname = f"timeseries_{e_val.name}_{'-'.join(da_dict.keys())}.png"
+        plt.savefig(fname, bbox_inches="tight", dpi=300)
+        logging.info("saved figure %s", fname)
+
+    return fig
 
 
 def plot_ts(
-    da: xr.DataArray,
+    data: np.ndarray,
+    times: np.ndarray,
     ax: matplotlib.axes.Axes | None = None,
     save: bool = False,
     title: str | None = None,
-    **kwargs: Dict[str, Any]
+    **kwargs: Any,
 ) -> matplotlib.figure.Figure:
     """Plot a time series.
 
     Parameters
     ----------x
-    da : xarray.DataArray
-        data. the dimension has to be 'time'
+    data : np.ndarray
+        values
+    times : np.ndarray
+        valid time for values
     ax : matplotlib.axes.Axes, optional
         figure axis. use if provided, otherwise create one
     save : bool, optional
@@ -203,29 +224,88 @@ def plot_ts(
     else:
         fig, ax = plt.subplots()
 
-    # get time information
-    try:
-        time = da.valid_time.values
-    except AttributeError:
-        time = da.time.values
+    # check sizes
+    if not data.size == times.size:
+        logging.error("dimension mismatch in data and time")
+        sys.exit()
 
     # plot
-    ax.plot(time, da.values, **kwargs)
+    ax.plot(times, data, **kwargs)
 
     # set the title
     if title:
         ax.set_title(title)
     else:
-        ax.set_title(f"{da.name}")
+        ax.set_title("data time series")
 
     # format the time axis labeling
-    ax.xaxis.set_major_locator(mdates.HourLocator(interval=int(len(time)/5)))
-    ax.xaxis.set_major_formatter(mdates.DateFormatter("%d.%m.%y %H"))
-    ax.tick_params(axis='x', labelrotation=90)
+    # ax.xaxis.set_major_locator(mdates.HourLocator(interval=int(len(times)/5)))
+    # ax.xaxis.set_major_formatter(mdates.DateFormatter("%d.%m.%y %H"))
+    ax.tick_params(axis="x", labelrotation=90)
 
     if save:
-        fname = f"timeseries_{da.name}.png"
+        fname = "timeseries.png"
         plt.savefig(fname, bbox_inches="tight", dpi=300)
-        logging.info(f"saved figure %s", fname)
+        logging.info("saved figure %s", fname)
+
+    return fig
+
+
+def plot_domain(
+    gd: IconGrid,
+    domain_name: str,
+    ax: matplotlib.axes.Axes | None = None,
+    save: bool = False,
+) -> matplotlib.figure.Figure:
+    """Plot a quicklook of the domain, excluding masked regions."""
+    # Third-party
+    # pylint: disable=import-outside-toplevel
+    from cartopy.crs import PlateCarree  # type: ignore
+    from cartopy.feature import NaturalEarthFeature  # type: ignore
+
+    # pylint: enable=import-outside-toplevel
+
+    if ax:
+        fig = ax.get_figure()
+    else:
+        fig, ax = plt.subplots()
+
+    # create figure
+    fig, ax = plt.subplots(subplot_kw=dict(projection=PlateCarree()))
+
+    # plot the data for the unmasked region
+    try:
+        cx = gd.cx[~gd.mask]
+        cy = gd.cy[~gd.mask]
+    except TypeError:
+        cx = gd.cx
+        cy = gd.cy
+    vals = np.ones(cy.size)
+    vals[0] = 10.0  # tricontourf does not work when all values are equal
+    ax.tricontourf(cx, cy, vals, transform=PlateCarree(), alpha=0.5)
+
+    # set ticklabels, suppress gridlines, set axes limits
+    gl = ax.gridlines(draw_labels=True, linewidth=0)
+    gl.top_labels = False
+    gl.right_labels = False
+    ax.set_xlim(gd.cx.min(), gd.cx.max())
+    ax.set_ylim(gd.cy.min(), gd.cy.max())
+
+    # add borders and coasts
+    ax.coastlines(resolution="10m", color="black")
+    ax.add_feature(
+        NaturalEarthFeature("cultural", "admin_0_boundary_lines_land", "10m"),
+        edgecolor="black",
+        facecolor="none",
+    )
+
+    # add title
+    ax.set_title(f"domain: {domain_name}")
+
+    # save the figute
+    if save:
+        fname = f"domain_{domain_name.replace(' ', '')}.png"
+        plt.savefig(fname, dpi=300)
+        logging.info("saved figure %s", fname)
 
     return fig

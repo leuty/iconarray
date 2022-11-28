@@ -1,13 +1,18 @@
 """Handle ICON grid files."""
 # Standard library
+import logging
+import sys
 from typing import Sequence
+from typing import Tuple
 
 # Third-party
 import matplotlib.path as mpath  # type: ignore
 import matplotlib.tri as mtri  # type: ignore
 import netCDF4 as nc  # type: ignore
 import numpy as np
+import pkg_resources  # type: ignore
 import xarray as xr
+import yaml  # type: ignore
 
 
 class IconGrid(mtri.Triangulation):
@@ -153,3 +158,40 @@ def get_grid(gridfile: str) -> IconGrid:
         gd = IconGrid(vlon, vlat, vertex_of_cell.T, clon, clat)
 
     return gd
+
+
+def get_domain(domain: str) -> Tuple[Sequence, str]:
+    """Read domain information from yaml file.
+
+    Parameters
+    ----------
+    domain : str
+        domain to consider, please define in domains.yaml
+
+    Returns
+    -------
+    dom_points : sequence
+        a sequence of (x, y [,z]) numeric coordinate pairs or triples, or an
+        array-like with shape (N, 2) or (N, 3). Also can be a sequence of Point
+        objects.
+    dom_name : str
+        domain description
+
+    """
+    # user-defined domain
+    with pkg_resources.resource_stream("resources", "domains.yaml") as handle:
+        avail_domains = yaml.safe_load(handle.read())
+    try:
+        dom_pts = avail_domains[domain]["points"]
+    except KeyError:
+        logging.error(
+            "domain '%s' is not defined. add it to "
+            "src/resources/domains.yaml and reinstall the package"
+        )
+        sys.exit()
+    try:
+        dom_name = avail_domains[domain]["full_name"]
+    except KeyError:
+        dom_name = "undefined"
+
+    return dom_pts, dom_name

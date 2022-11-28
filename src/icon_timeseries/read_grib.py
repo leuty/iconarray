@@ -14,7 +14,6 @@ from dask.distributed import Client
 from dask.distributed import LocalCluster
 from dask.distributed import performance_report
 
-
 # keep attributes on xarray Datasets and DataArrays
 xr.set_options(keep_attrs=True)
 
@@ -100,10 +99,10 @@ def var_from_files(
     if level:
         try:
             da = da.loc[{da.GRIB_typeOfLevel: level}]
+            da.attrs["level"] = level
         except KeyError:
             logging.error("level not found in data")
             sys.exit()
-    da.attrs["level"] = level
 
     return da
 

@@ -4,13 +4,19 @@ import glob
 import logging
 import os
 import sys
+from typing import Dict
+from typing import Tuple
 
 # Third-party
 import click
+import xarray as xr
 
 # Local
 from . import __version__
-from .plot import plot_mean_max
+from .handle_grid import get_domain
+from .handle_grid import get_grid
+from .plot import plot_domain
+from .plot import plot_ts_multiple
 from .plot import prepare_data
 
 logging.getLogger(__name__)
@@ -48,15 +54,27 @@ def main(ctx, **kwargs) -> None:
 
 @main.command()
 @click.option(
-    "--filepattern",
+    "--exp",
     required=True,
-    type=str,
-    help="pattern to files to read, will be expanded to a list with glob.glob",
+    type=(str, str),
+    nargs=2,
+    multiple=True,
+    help=(
+        "experiment info. file pattern to files to read, will be expanded to a "
+        "list with glob.glob, and experiment identifier"
+    ),
 )
 @click.option(
     "--varname", required=True, type=str, help="GRIB shortName of the variable"
 )
 @click.option("--level", required=True, type=int, help="model level index")
+@click.option(
+    "--color",
+    default=None,
+    type=str,
+    multiple=True,
+    help="color to use for experiments in plot, used as specified",
+)
 @click.option(
     "--gridfile",
     default=None,
@@ -77,16 +95,16 @@ def main(ctx, **kwargs) -> None:
     help="ignored if the script does not run on a post-proc node",
 )
 def meanmax(
-    filepattern: str,
+    exp: Tuple[Tuple, ...],
     varname: str,
     level: int,
-    gridfile: str,
+    color: str | None,
+    gridfile: str | None,
     domain: str,
     dask_nworkers: int | None,
 ):  # pylint: disable=too-many-arguments
-    """Read data for a variable from GRIB file(s) and plot a domain average."""
-    filelist = glob.glob(filepattern)
-
+    """Read data for a variable from GRIB file(s) and plot a domain average and max."""
+    # check dask setup
     chunks = None
     if "pp" in os.uname().nodename:
         logging.info("job is running on %s, dask_nworkers active", os.uname().nodename)
@@ -99,15 +117,52 @@ def meanmax(
         logging.warning("send your job on a post-proc node to activate dask_nworkers")
         dask_nworkers = None
 
-    da_mean, da_max = prepare_data(
-        filelist,
-        varname,
-        level,
-        gridfile,
-        domain=domain,
-        chunks=chunks,
-        dask_nworkers=dask_nworkers,
-    )
+    # gather data for all experiments
+    da_dict = {"mean": {}, "max": {}}  # type: Dict[str, Dict[str, xr.DataArray]]
+    for one_exp in exp:
+        filelist = glob.glob(one_exp[0])
+        if len(filelist) == 0:
+            logging.warning("file list for %s is empty, skipping...", one_exp[0])
+            continue
+        da_mean, da_max = prepare_data(
+            filelist,
+            varname,
+            level,
+            gridfile,
+            domain=domain,
+            chunks=chunks,
+            dask_nworkers=dask_nworkers,
+        )
+        da_dict["mean"][one_exp[1]] = da_mean
+        da_dict["max"][one_exp[1]] = da_max
 
     # plot the time series
-    plot_mean_max(da_mean, da_max, domain=domain)
+    plot_ts_multiple(da_dict, domain=domain)
+
+
+@main.command()
+@click.option(
+    "--gridfile",
+    required=True,
+    type=str,
+    help="ICON grid file",
+)
+@click.option(
+    "--domain",
+    default="all",
+    type=str,
+    help="domain to consider, please define in domains.yaml",
+)
+def quicklook_domain(
+    gridfile: str,
+    domain: str,
+):
+    """Visualise the considered domain."""
+    # read the grid
+    gd = get_grid(gridfile)
+    # get the domain info
+    dom_pts, dom_name = get_domain(domain)
+    # mask the grid
+    gd.mask_domain(dom_pts)
+    # plot domain
+    plot_domain(gd, dom_name, save=True)
