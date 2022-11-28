@@ -22,6 +22,39 @@ from .handle_grid import points_in_domain
 from .read_grib import var_from_files
 
 
+def deaverage(da: xr.DataArray) -> xr.DataArray:
+    """Deaverage (over time).
+
+    Parameters
+    ----------
+    da : xarray.DataArray
+        DataArray with time-averaged values. Needs time as dimension.
+
+    """
+    subtrahend = da.sel(time=da.time[:-1])
+    subtrahend = subtrahend.assign_coords({"time": da.time[1:]})
+    fcst_hour = ((da.time[1:] - da.time[0]) / 3.6e12).astype(np.int32)  # ns to h
+    deavd = da.copy()
+    deavd.loc[da.time[1:]] = da * (fcst_hour + 1) - subtrahend * fcst_hour
+    return deavd
+
+
+def deagg_sum(da: xr.DataArray) -> xr.DataArray:
+    """Deaggregate a sum (over time).
+
+    Parameters
+    ----------
+    da : xarray.DataArray
+        DataArray with time-aggregated (summed) values. Needs time as dimension.
+
+    """
+    subtrahend = da.sel(time=da.time[:-1])
+    subtrahend = subtrahend.assign_coords({"time": da.time[1:]})
+    deaggd = da.copy()
+    deaggd.loc[da.time[1:]] = da - subtrahend
+    return deaggd
+
+
 # pylint: disable=too-many-arguments, too-many-locals
 def prepare_data(
     filelist: List[str],

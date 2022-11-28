@@ -5,8 +5,11 @@ import glob
 # Third-party
 import matplotlib.pyplot as plt  # type: ignore
 import numpy as np
+import xarray as xr
 
 # First-party
+from icon_timeseries.plot import deagg_sum
+from icon_timeseries.plot import deaverage
 from icon_timeseries.plot import plot_ts
 from icon_timeseries.plot import prepare_data
 
@@ -42,3 +45,33 @@ def test_ts():
         da_mean.values,
         "y values in plot do not match input values",
     )
+
+
+def _create_test_da() -> xr.DataArray:
+    """Create simple sample DataArray"""
+    smpl_data = np.random.rand(5, 5)
+    t = np.arange("2022-11-28T00:00", "2022-11-28T05:00", dtype="datetime64[h]")
+    x = np.arange(0, 5, dtype="int32")
+    smpl_coords = (t, x)
+    smpl_da = xr.DataArray(smpl_data, dims=["time", "x"], coords=smpl_coords)
+    return smpl_da
+
+
+def test_deaverage():
+    """Test deaveraging over time."""
+    test_da = _create_test_da()
+    av_da = test_da.copy()
+    for i in range(1, 5):
+        av_da[i, :] = test_da[0 : (i + 1), :].mean(dim="time")
+    deav_da = deaverage(av_da)
+    np.testing.assert_array_almost_equal(deav_da, test_da, decimal=14)
+
+
+def test_deagg_sum():
+    """Test deaggregation of sums over time."""
+    test_da = _create_test_da()
+    agg_da = test_da.copy()
+    for i in range(1, 5):
+        agg_da[i, :] = agg_da[i - 1, :] + test_da[i]
+    deagg_da = deagg_sum(agg_da)
+    np.testing.assert_array_almost_equal(deagg_da, test_da, decimal=14)
