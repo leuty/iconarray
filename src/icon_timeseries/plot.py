@@ -34,7 +34,7 @@ def deaverage(da: xr.DataArray) -> xr.DataArray:
     subtrahend = da.sel(time=da.time[:-1])
     subtrahend = subtrahend.assign_coords({"time": da.time[1:]})
     fcst_hour = ((da.time[1:] - da.time[0]) / 3.6e12).astype(np.int32)  # ns to h
-    deavd = da.copy()
+    deavd = da
     deavd.loc[da.time[1:]] = da * (fcst_hour + 1) - subtrahend * fcst_hour
     return deavd
 
@@ -50,7 +50,7 @@ def deagg_sum(da: xr.DataArray) -> xr.DataArray:
     """
     subtrahend = da.sel(time=da.time[:-1])
     subtrahend = subtrahend.assign_coords({"time": da.time[1:]})
-    deaggd = da.copy()
+    deaggd = da
     deaggd.loc[da.time[1:]] = da - subtrahend
     return deaggd
 
