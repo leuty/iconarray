@@ -4,8 +4,11 @@ channels:
 dependencies:
   - python>=3.10
   - dask
+  - cartopy
   - cfgrib
   - click
+  - matplotlib
+  - netCDF4
   - pip
   - pytest
   - xarray

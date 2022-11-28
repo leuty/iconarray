@@ -1,6 +1,7 @@
 """Read GRIB files."""
 # Standard library
 import logging
+import sys
 import time
 from typing import Any
 from typing import Dict
@@ -13,10 +14,15 @@ from dask.distributed import Client
 from dask.distributed import LocalCluster
 from dask.distributed import performance_report
 
+# keep attributes on xarray Datasets and DataArrays
+xr.set_options(keep_attrs=True)
 
+
+# pylint: disable=too-many-arguments
 def var_from_files(
     filelist: List[str],
     varname: str,
+    level: int | None = None,
     parallel: bool = False,
     chunks: Dict[str, int] | None = None,
     dask_nworkers: int | None = None,
@@ -29,9 +35,11 @@ def var_from_files(
         list of files to read
     varname : str
         GRIB shortName of variable to extract
+    level : int, optional
+        model level index, no selection if None
     parallel : bool, optional
         parallelise the reading with dask.
-    chunks : Dict(str, int)
+    chunks : Dict(str, int), optional
         chunk size for each dimension to be loaded.
     dask_nworkers : int, optional
         if set, data reading is done in parallel using dask_nworkers workers
@@ -42,6 +50,10 @@ def var_from_files(
         output data
 
     """
+    filelist.sort()
+    logging.info("reading %d files", len(filelist))
+    logging.info("files: %s", filelist)
+
     # define arguments for open_mfdataset and the cfgrib engine
     backend_kwargs = {
         "indexpath": "",
@@ -82,5 +94,17 @@ def var_from_files(
             filelist, concat_dim="time", combine="nested", parallel=parallel, **kwargs
         )
 
+    # selection
     da = ds[varname]
+    if level:
+        try:
+            da = da.loc[{da.GRIB_typeOfLevel: level}]
+            da.attrs["level"] = level
+        except KeyError:
+            logging.error("level not found in data")
+            sys.exit()
+
     return da
+
+
+# pylint: enable=too-many-arguments
