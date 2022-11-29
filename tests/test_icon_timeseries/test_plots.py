@@ -38,6 +38,7 @@ def test_ts():
         80,
         gridfile,
         domain=domain,
+        deagg="no",
     )
     plot_ts(da_mean.values, da_mean.valid_time.values)
     np.testing.assert_array_equal(
@@ -53,22 +54,22 @@ def _create_test_da() -> xr.DataArray:
     t = np.arange("2022-11-28T00:00", "2022-11-28T05:00", dtype="datetime64[h]")
     x = np.arange(0, 5, dtype="int32")
     smpl_coords = (t, x)
-    smpl_da = xr.DataArray(smpl_data, dims=["time", "x"], coords=smpl_coords)
+    smpl_da = xr.DataArray(smpl_data, dims=["valid_time", "x"], coords=smpl_coords)
     return smpl_da
 
 
 def test_deaverage():
-    """Test deaveraging over time."""
+    """Test deaveraging over valid_time."""
     test_da = _create_test_da()
     av_da = test_da.copy()
     for i in range(1, 5):
-        av_da[i, :] = test_da[0 : (i + 1), :].mean(dim="time")
+        av_da[i, :] = test_da[0 : (i + 1), :].mean(dim="valid_time")
     deav_da = deaverage(av_da)
     np.testing.assert_array_almost_equal(deav_da, test_da, decimal=14)
 
 
 def test_deagg_sum():
-    """Test deaggregation of sums over time."""
+    """Test deaggregation of sums over valid_time."""
     test_da = _create_test_da()
     agg_da = test_da.copy()
     for i in range(1, 5):
