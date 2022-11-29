@@ -42,6 +42,7 @@ def deaverage(da: xr.DataArray) -> xr.DataArray:
     )  # ns to h
     deavd = da
     deavd.loc[da.valid_time[1:]] = da * (fcst_hour + 1) - subtrahend * fcst_hour
+    deavd.attrs["GRIB_stepType"] = "instant"
     return deavd
 
 
@@ -62,6 +63,7 @@ def deagg_sum(da: xr.DataArray) -> xr.DataArray:
     subtrahend = subtrahend.assign_coords({"valid_time": da.valid_time[1:]})
     deaggd = da
     deaggd.loc[da.valid_time[1:]] = da - subtrahend
+    deaggd.attrs["GRIB_stepType"] = "instant"
     return deaggd
 
 
