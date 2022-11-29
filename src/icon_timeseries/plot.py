@@ -22,13 +22,60 @@ from .handle_grid import points_in_domain
 from .read_grib import var_from_files
 
 
-# pylint: disable=too-many-arguments, too-many-locals
+def deaverage(da: xr.DataArray) -> xr.DataArray:
+    """Deaverage (over valid_time).
+
+    Parameters
+    ----------
+    da : xarray.DataArray
+        DataArray with time-averaged values. Needs valid_time as dimension.
+
+    """
+    try:
+        subtrahend = da.sel(valid_time=da.valid_time[:-1])
+    except KeyError:
+        da = da.swap_dims({"time": "valid_time"})
+        subtrahend = da.sel(valid_time=da.valid_time[:-1])
+    subtrahend = subtrahend.assign_coords({"valid_time": da.valid_time[1:]})
+    fcst_hour = ((da.valid_time[1:] - da.valid_time[0]) / 3.6e12).astype(
+        np.int32
+    )  # ns to h
+    deavd = da
+    deavd.loc[da.valid_time[1:]] = da * (fcst_hour + 1) - subtrahend * fcst_hour
+    deavd.attrs["GRIB_stepType"] = "instant"
+    return deavd
+
+
+def deagg_sum(da: xr.DataArray) -> xr.DataArray:
+    """Deaggregate a sum (over valid_time).
+
+    Parameters
+    ----------
+    da : xarray.DataArray
+        DataArray with time-aggregated (summed) values. Needs valid_time as dimension.
+
+    """
+    try:
+        subtrahend = da.sel(valid_time=da.valid_time[:-1])
+    except KeyError:
+        da = da.swap_dims({"time": "valid_time"})
+        subtrahend = da.sel(valid_time=da.valid_time[:-1])
+    subtrahend = subtrahend.assign_coords({"valid_time": da.valid_time[1:]})
+    deaggd = da
+    deaggd.loc[da.valid_time[1:]] = da - subtrahend
+    deaggd.attrs["GRIB_stepType"] = "instant"
+    return deaggd
+
+
+# pylint: disable=too-many-arguments, too-many-locals, too-many-branches
+# we should definitely refactor :-D
 def prepare_data(
     filelist: List[str],
     varname: str,
-    level: int,
+    level: int | None = None,
     gridfile: str | None = None,
     domain: str = "all",
+    deagg: str = "no",
     chunks: Dict[str, int] | None = None,
     dask_nworkers: int | None = None,
 ) -> Tuple[xr.DataArray, xr.DataArray]:
@@ -46,6 +93,8 @@ def prepare_data(
         ICON grid file, needed for unstructured grid
     domain : str
         domain to consider, please define in domains.yaml. default is whole domain
+    deagg : str
+        Deaggregation of variable 'average', 'sum' or 'no'. default is 'no'.
     chunks : Dict(str, int), optional
         chunk size for each dimension to be loaded.
     dask_nworkers : int, optional
@@ -103,6 +152,15 @@ def prepare_data(
     tend = time.perf_counter()
     telapsed = tend - tstart
     logging.info("reading time elapsed: %f", telapsed)
+
+    if deagg == "no":
+        pass
+    elif deagg == "average":
+        da = deaverage(da)
+    elif deagg == "sum":
+        da = deagg_sum(da)
+    else:
+        raise NotImplementedError("Arg to deagg must be 'average', 'sum' or 'no'.")
 
     if domain != "all":
         # apply the domain mask
@@ -172,10 +230,16 @@ def plot_ts_multiple(
             # plot
             plot_ts(vals, time_vals, ax=axs[i], label=e_key)
         # set title and legend
-        axs[i].set_title(
-            f"{e_val.name} {p_key} ({e_val.GRIB_stepType}, {e_val.GRIB_units}) "
-            f"for {domain}, level {e_val.level}"
-        )
+        try:
+            axs[i].set_title(
+                f"{e_val.name} {p_key} ({e_val.GRIB_stepType}, {e_val.GRIB_units}) "
+                f"for {domain}, level {e_val.level}"
+            )
+        except AttributeError:
+            axs[i].set_title(
+                f"{e_val.name} {p_key} ({e_val.GRIB_stepType}, {e_val.GRIB_units}) "
+                f"for {domain}"
+            )
         axs[i].legend()
 
     axs[0].xaxis.set_ticklabels([])

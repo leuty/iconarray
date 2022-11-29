@@ -67,7 +67,7 @@ def main(ctx, **kwargs) -> None:
 @click.option(
     "--varname", required=True, type=str, help="GRIB shortName of the variable"
 )
-@click.option("--level", required=True, type=int, help="model level index")
+@click.option("--level", default=None, type=int, help="model level index")
 @click.option(
     "--color",
     default=None,
@@ -88,6 +88,12 @@ def main(ctx, **kwargs) -> None:
     help="domain to consider, please define in domains.yaml",
 )
 @click.option(
+    "--deagg",
+    default="no",
+    type=str,
+    help="deagreggation of variable: Possible are 'average', 'sum' and 'no'",
+)
+@click.option(
     "--dask-workers",
     "dask_nworkers",
     default=None,
@@ -97,10 +103,11 @@ def main(ctx, **kwargs) -> None:
 def meanmax(
     exp: Tuple[Tuple, ...],
     varname: str,
-    level: int,
+    level: int | None,
     color: str | None,
     gridfile: str | None,
     domain: str,
+    deagg: str,
     dask_nworkers: int | None,
 ):  # pylint: disable=too-many-arguments
     """Read data for a variable from GRIB file(s) and plot a domain average and max."""
@@ -130,6 +137,7 @@ def meanmax(
             level,
             gridfile,
             domain=domain,
+            deagg=deagg,
             chunks=chunks,
             dask_nworkers=dask_nworkers,
         )
