@@ -62,8 +62,8 @@ def test_deaverage():
     """Test deaveraging over valid_time."""
     test_da = _create_test_da()
     av_da = test_da.copy()
-    for i in range(1, 5):
-        av_da[i, :] = test_da[0 : (i + 1), :].mean(dim="valid_time")
+    for i in range(2, 5):
+        av_da[i, :] = (float(i - 1) * av_da[i - 1, :] + test_da[i, :]) / float(i)
     deav_da = deaverage(av_da)
     np.testing.assert_array_almost_equal(deav_da, test_da, decimal=14)
 
@@ -72,7 +72,7 @@ def test_deagg_sum():
     """Test deaggregation of sums over valid_time."""
     test_da = _create_test_da()
     agg_da = test_da.copy()
-    for i in range(1, 5):
+    for i in range(2, 5):
         agg_da[i, :] = agg_da[i - 1, :] + test_da[i]
     deagg_da = deagg_sum(agg_da)
     np.testing.assert_array_almost_equal(deagg_da, test_da, decimal=14)

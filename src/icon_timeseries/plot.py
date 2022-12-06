@@ -32,16 +32,15 @@ def deaverage(da: xr.DataArray) -> xr.DataArray:
 
     """
     try:
-        subtrahend = da.sel(valid_time=da.valid_time[:-1])
+        subtrahend = da.sel(valid_time=da.valid_time[1:-1])
     except KeyError:
         da = da.swap_dims({"time": "valid_time"})
-        subtrahend = da.sel(valid_time=da.valid_time[:-1])
-    subtrahend = subtrahend.assign_coords({"valid_time": da.valid_time[1:]})
-    fcst_hour = ((da.valid_time[1:] - da.valid_time[0]) / 3.6e12).astype(
-        np.int32
-    )  # ns to h
+        subtrahend = da.sel(valid_time=da.valid_time[1:-1])
+    subtrahend = subtrahend.assign_coords({"valid_time": da.valid_time[2:]})
+    dt = da.valid_time[1] - da.valid_time[0]  # improve with unique and catch irregular
+    n_fcst = ((da.valid_time[2:] - da.valid_time[0]) / dt).astype(np.int32)  # ns to h
     deavd = da
-    deavd.loc[da.valid_time[1:]] = da * (fcst_hour + 1) - subtrahend * fcst_hour
+    deavd.loc[da.valid_time[2:]] = da * n_fcst - subtrahend * (n_fcst - 1)
     deavd.attrs["GRIB_stepType"] = "instant"
     return deavd
 
@@ -56,13 +55,13 @@ def deagg_sum(da: xr.DataArray) -> xr.DataArray:
 
     """
     try:
-        subtrahend = da.sel(valid_time=da.valid_time[:-1])
+        subtrahend = da.sel(valid_time=da.valid_time[1:-1])
     except KeyError:
         da = da.swap_dims({"time": "valid_time"})
-        subtrahend = da.sel(valid_time=da.valid_time[:-1])
-    subtrahend = subtrahend.assign_coords({"valid_time": da.valid_time[1:]})
+        subtrahend = da.sel(valid_time=da.valid_time[1:-1])
+    subtrahend = subtrahend.assign_coords({"valid_time": da.valid_time[2:]})
     deaggd = da
-    deaggd.loc[da.valid_time[1:]] = da - subtrahend
+    deaggd.loc[da.valid_time[2:]] = da - subtrahend
     deaggd.attrs["GRIB_stepType"] = "instant"
     return deaggd
 
