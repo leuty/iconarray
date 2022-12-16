@@ -104,6 +104,18 @@ def var_from_files(
             logging.error("level not found in data")
             sys.exit()
 
+    try:
+        if da.number.shape[0] > 1:
+            logging.info("Found multiple ensemble members. Reshaping ensemble data.")
+            da = da.set_xindex(["valid_time", "number"])
+            da = da.unstack("time")
+        else:
+            logging.info("Only one ensemble member found. Continuing.")
+    except IndexError:
+        logging.info("Dimension for ensemble size empty. Continuing.")
+    except AttributeError:
+        logging.info("No dimension for ensemble information found. Continuing.")
+
     return da
 
 

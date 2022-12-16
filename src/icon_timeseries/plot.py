@@ -40,7 +40,9 @@ def deaverage(da: xr.DataArray) -> xr.DataArray:
     dt = da.valid_time[1] - da.valid_time[0]  # improve with unique and catch irregular
     n_fcst = ((da.valid_time[2:] - da.valid_time[0]) / dt).astype(np.int32)  # ns to h
     deavd = da
-    deavd.loc[da.valid_time[2:]] = da * n_fcst - subtrahend * (n_fcst - 1)
+    deavd.loc[{"valid_time": da.valid_time[2:]}] = da * n_fcst - subtrahend * (
+        n_fcst - 1
+    )
     deavd.attrs["GRIB_stepType"] = "instant"
     return deavd
 
@@ -61,7 +63,9 @@ def deagg_sum(da: xr.DataArray) -> xr.DataArray:
         subtrahend = da.sel(valid_time=da.valid_time[1:-1])
     subtrahend = subtrahend.assign_coords({"valid_time": da.valid_time[2:]})
     deaggd = da
-    deaggd.loc[da.valid_time[2:]] = da - subtrahend
+    deaggd.loc[{"valid_time": da.valid_time[2:]}] = (
+        da.loc[{"valid_time": da.valid_time[2:]}] - subtrahend
+    )
     deaggd.attrs["GRIB_stepType"] = "instant"
     return deaggd
 
@@ -174,8 +178,11 @@ def prepare_data(
         elif da.attrs["GRIB_gridType"] == "unstructured_grid":
             # mask grid points outside of the domain
             gd.mask_domain(dom_pts)
+            mask_da = xr.DataArray(
+                gd.mask, coords={"values": da.coords["values"]}, name="mask"
+            )
             # apply domain mask
-            da = da.where(~gd.mask)  # pylint: disable=invalid-unary-operand-type
+            da = da.where(~mask_da)  # pylint: disable=invalid-unary-operand-type
 
     # compute average and maximum
     if da.attrs["GRIB_gridType"] == "rotated_ll":
@@ -191,9 +198,11 @@ def prepare_data(
 # pylint: enable=too-many-arguments, too-many-locals
 
 
+# pylint: disable=too-many-locals
 def plot_ts_multiple(
     da_dict: Dict[str, Dict[str, xr.DataArray]],
     domain: str | None = None,
+    colors: List[str] | None = None,
     save: bool = True,
 ) -> matplotlib.figure.Figure:
     """Plot the time series of parameters defined on a domain.
@@ -205,6 +214,8 @@ def plot_ts_multiple(
         dimension of the xarray.DataArray has to be 'time'
     domain : str, optional
         name of the domain for the plot title
+    colors : List[str], optional
+        List of (matplotlib) colors. Length must match number of experiments.
     save : bool, optional
         save the figure
 
@@ -218,16 +229,35 @@ def plot_ts_multiple(
 
     for i, (p_key, p_val) in enumerate(da_dict.items()):
         e_val = xr.DataArray()
+        exp_count = 0
+        if colors is None:
+            # Take the color sequence from a colormap
+            cmap = plt.cm.get_cmap("cividis", len(p_val) + 1)
+        logging.info("Number of Experiments: %i", len(p_val))
         for e_key, e_val in p_val.items():
             logging.info("plotting for parameter %s, exp %s", p_key, e_key)
-            # get values and time information
-            vals = e_val.values
+            # set color
+            color = cmap(exp_count)
+            # get time information
             try:
-                time_vals = e_val.valid_time.values
-            except AttributeError:
-                time_vals = e_val.time.values
-            # plot
-            plot_ts(vals, time_vals, ax=axs[i], label=e_key)
+                if e_val.number.shape[0] > 1:
+                    logging.info("Looping over %i members.", e_val.number.shape[0])
+                    plot_ensemble(e_key, e_val, axs[i], color)
+                else:  # ensemble information given, but m is 1-dimensional
+                    vals = e_val.values
+                    try:
+                        time_vals = e_val.valid_time.values
+                    except AttributeError:
+                        time_vals = e_val.time.values
+                    plot_ts(vals, time_vals, ax=axs[i], label=e_key, color=color)
+            except (
+                AttributeError,
+                IndexError,
+            ):  # no ensemble coord or dim given or dim is 0d.
+                vals = e_val.values
+                plot_ts(vals, time_vals, ax=axs[i], label=e_key, color=color)
+
+            exp_count += 1
         # set title and legend
         try:
             axs[i].set_title(
@@ -249,6 +279,9 @@ def plot_ts_multiple(
         logging.info("saved figure %s", fname)
 
     return fig
+
+
+# pylint: enable=too-many-locals
 
 
 def plot_ts(
@@ -312,6 +345,58 @@ def plot_ts(
         logging.info("saved figure %s", fname)
 
     return fig
+
+
+def plot_ensemble(
+    e_key: str, e_val: xr.DataArray, ax: matplotlib.axes.Axes, color: str
+):
+    """Plot a time series for each ensemble member.
+
+    Helper function tailored to fit plot_ts_multiple and plot_ts.
+
+    Parameter
+    ---------
+    e_key : str
+        Experiment Key (Identifier).
+    e_value :
+        Experiment values in a DataArray.
+    ax : matplotlib.axes.Axes
+        Axes object to plot to.
+    color : str
+        Must be in matplotlib.colors
+
+    Returns
+    -------
+    ax : matplotlib.axes.Axes
+        Axes object on which the time series has been plotted.
+
+    """
+    try:
+        time_vals = e_val.valid_time.values
+    except AttributeError:
+        time_vals = e_val.time.values
+    for m in e_val.number:
+        vals = e_val.sel(number=m).values
+        # plot
+        if m.values == 0:
+            plot_ts(
+                vals,
+                time_vals,
+                ax=ax,
+                label=e_key,
+                alpha=1.0,
+                color=color,
+            )
+        else:
+            plot_ts(
+                vals,
+                time_vals,
+                ax=ax,
+                label="",
+                alpha=0.1,
+                color=color,
+            )
+    return ax
 
 
 def plot_domain(

@@ -144,6 +144,11 @@ def meanmax(
         da_dict["mean"][one_exp[1]] = da_mean
         da_dict["max"][one_exp[1]] = da_max
 
+    # check if any data was found
+    if (len(da_dict["mean"]) == 0) or (len(da_dict["max"]) == 0):
+        logging.error("No data was found.")
+        sys.exit()
+
     # plot the time series
     plot_ts_multiple(da_dict, domain=domain)
 
