@@ -181,7 +181,7 @@ def prepare_nn(
 
     lon, lat = parse_coords(lonlat)
     if "gd" in locals():  # unstructured grid
-        index = ind_from_nn(gd.cx, gd.cy, lon, lat, verbose=True)
+        index = ind_from_nn(gd.cx, gd.cy, lon, lat)
         da_nn = da.isel({"values": index})
     else:  # rotated pole
         x, y = nearest_xy(da.longitude.values, da.latitude.values, lon, lat)
