@@ -17,8 +17,8 @@ from .handle_grid import get_domain
 from .handle_grid import get_grid
 from .plot import plot_domain
 from .plot import plot_ts_multiple
-from .plot import prepare_data
-from .plot import prepare_nn
+from .prepare_data import prepare_meanmax
+from .prepare_data import prepare_nn
 
 logging.getLogger(__name__)
 log_format = "%(levelname)8s: %(message)s [%(filename)s:%(lineno)s - %(funcName)s()]"
@@ -132,7 +132,7 @@ def meanmax(
         if len(filelist) == 0:
             logging.warning("file list for %s is empty, skipping...", one_exp[0])
             continue
-        da_mean, da_max = prepare_data(
+        da_mean, da_max = prepare_meanmax(
             filelist,
             varname,
             level,
