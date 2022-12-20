@@ -55,10 +55,14 @@ def ind_from_nn(lats, lons, lat, lon, verbose=False):
     ]
     ind = np.where(dist == np.min(dist))[0][0]
 
-    if verbose:
-        print(f"Closest ind: {ind}")
-        print(f" Given lat: {lat:.3f} vs found lat: {lats[ind]:.3f}")
-        print(f" Given lat: {lon:.3f} vs found lon: {lons[ind]:.3f}")
+    logging.info(
+        "Closest ind %d. Given lon-lat: %f,%f, found lon-lat: %f,%f",
+        ind,
+        lon,
+        lat,
+        lons[ind],
+        lats[ind],
+        )
 
     return ind
 
