@@ -35,22 +35,22 @@ def nearest_xy(lon2d: np.ndarray, lat2d: np.ndarray, lon: float, lat: float):
     return x, y
 
 
-def ind_from_nn(lats, lons, lat, lon):
+def ind_from_nn(lons, lats, lon, lat):
     """Find the nearest neighbouring index to given location.
 
     Copy-pasted from plot_profile/plot_icon/get_icon.py (sawrry ...)
     Args:
-        lats (2d array):            Latitude grid
         lons (2d array):            Longitude grid
-        lat (float):                Latitude of location
+        lats (2d array):            Latitude grid
         lon (float):                Longitude of location
+        lat (float):                Latitude of location
 
     Returns:
         int     Index of nearest grid point.
 
     """
     dist = [
-        np.sqrt((lats[i] - lat) ** 2 + (lons[i] - lon) ** 2) for i in range(len(lats))
+        np.sqrt(((lons[i] - lon) ** 2 + lats[i] - lat) ** 2) for i in range(len(lats))
     ]
     ind = np.where(dist == np.min(dist))[0][0]
 
