@@ -95,7 +95,15 @@ def var_from_files(
         )
 
     # selection
-    da = ds[varname]
+    try:
+        da = ds[varname]
+    except KeyError:
+        logging.error(
+            "Cannot find %s in data. Make sure your ecCodes environment "
+            "is loaded correctly, e.g. did you run ./setup_grib_env.sh?",
+            varname,
+        )
+        sys.exit()
     if level:
         try:
             da = da.loc[{da.GRIB_typeOfLevel: level}]

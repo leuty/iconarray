@@ -10,6 +10,7 @@ from typing import Tuple
 
 # Third-party
 import matplotlib  # type: ignore
+import matplotlib.dates as mdates  # type: ignore
 import matplotlib.pyplot as plt  # type: ignore
 import numpy as np
 import xarray as xr
@@ -20,6 +21,36 @@ from .handle_grid import get_grid
 from .handle_grid import IconGrid
 from .handle_grid import points_in_domain
 from .read_grib import var_from_files
+from .utils import ind_from_nn
+from .utils import nearest_xy
+from .utils import parse_coords
+
+
+def _check_time_dim(da: xr.DataArray) -> None:
+    """Check if time dimension is longer than one.
+
+    Raise Error if shape of da.valid_time is empty tuple or 1.
+
+    Parameters
+    ----------
+    da : xarray.DataArray
+        DataArray must have valid_time as an attribute (variable, coord, dim)
+
+    """
+    if da.valid_time.shape == ():
+        logging.error(
+            "The time dimension of the given data must be longer"
+            "than one for deaggregation."
+        )
+        sys.exit()
+    elif da.valid_time.shape[0] < 2:
+        logging.error(
+            "The time dimension of the given data must be longer "
+            "than one for deaggregation."
+        )
+        sys.exit()
+    else:
+        pass
 
 
 def deaverage(da: xr.DataArray) -> xr.DataArray:
@@ -32,9 +63,11 @@ def deaverage(da: xr.DataArray) -> xr.DataArray:
 
     """
     try:
+        _check_time_dim(da)
         subtrahend = da.sel(valid_time=da.valid_time[1:-1])
     except KeyError:
         da = da.swap_dims({"time": "valid_time"})
+        _check_time_dim(da)
         subtrahend = da.sel(valid_time=da.valid_time[1:-1])
     subtrahend = subtrahend.assign_coords({"valid_time": da.valid_time[2:]})
     dt = da.valid_time[1] - da.valid_time[0]  # improve with unique and catch irregular
@@ -57,9 +90,11 @@ def deagg_sum(da: xr.DataArray) -> xr.DataArray:
 
     """
     try:
+        _check_time_dim(da)
         subtrahend = da.sel(valid_time=da.valid_time[1:-1])
     except KeyError:
         da = da.swap_dims({"time": "valid_time"})
+        _check_time_dim(da)
         subtrahend = da.sel(valid_time=da.valid_time[1:-1])
     subtrahend = subtrahend.assign_coords({"valid_time": da.valid_time[2:]})
     deaggd = da
@@ -70,8 +105,79 @@ def deagg_sum(da: xr.DataArray) -> xr.DataArray:
     return deaggd
 
 
-# pylint: disable=too-many-arguments, too-many-locals, too-many-branches
-# we should definitely refactor :-D
+# pylint: disable=too-many-arguments
+def check_grid(
+    filelist: List[str],
+    grid: IconGrid | None,
+    varname: str,
+    level: int | None = None,
+    chunks: Dict[str, int] | None = None,
+    dask_nworkers: int | None = None,
+) -> None:
+    """Check if provided grid matches provided dataset."""
+    logging.info("read grid file and check if grid is compatible")
+    # check if gridfile is needed on first file
+    da = var_from_files(
+        [filelist[0]],
+        varname,
+        level,
+        parallel=True,
+        chunks=chunks,
+        dask_nworkers=dask_nworkers,
+    )
+    if da.attrs["GRIB_gridType"] == "unstructured" and not grid:
+        logging.error("the data grid is unstructured, please provide a grid file!")
+        sys.exit()
+    elif da.attrs["GRIB_gridType"] == "unstructured_grid" and grid:
+        # check compatibility
+        if not grid.check_compatibility(da):
+            logging.error("grid and data are not compatible! size mismatch")
+            sys.exit()
+    elif da.attrs["GRIB_gridType"] not in ["unstructured_grid", "rotated_ll"]:
+        logging.error(
+            "no support for domain selection on grid type %s",
+            da.attrs["GRIB_gridType"],
+        )
+        sys.exit()
+
+
+# pylint: enable=too-many-arguments
+
+
+def mask_domain(
+    da: xr.DataArray, domain: str, grid: IconGrid | None = None
+) -> xr.DataArray:
+    """Apply domain mask to Dataarray."""
+    # get domain
+    dom_pts, _ = get_domain(domain)
+    # apply the domain mask
+    if da.attrs["GRIB_gridType"] == "rotated_ll":
+        points = np.stack(
+            [da.longitude.values.flatten(), da.latitude.values.flatten()], axis=1
+        )
+        mask = points_in_domain(points, dom_pts)
+        mask_da = xr.DataArray(
+            mask.reshape(da.longitude.values.shape),
+            dims=["y", "x"],
+            coords={"longitude": da["longitude"], "latitude": da["latitude"]},
+            name="mask",
+        )
+        # apply domain mask
+        da = da.where(mask_da)
+    elif da.attrs["GRIB_gridType"] == "unstructured_grid":
+        # mask grid points outside of the domain
+        assert grid is not None
+        # safety first :-)
+        grid.mask_domain(dom_pts)
+        mask_da = xr.DataArray(
+            grid.mask, coords={"values": da.coords["values"]}, name="mask"
+        )
+        # apply domain mask
+        da = da.where(~mask_da)  # pylint: disable=invalid-unary-operand-type
+    return da
+
+
+# pylint: disable=too-many-arguments
 def prepare_data(
     filelist: List[str],
     varname: str,
@@ -112,35 +218,13 @@ def prepare_data(
 
     """
     # get domain
-    if domain != "all":
-        dom_pts, _ = get_domain(domain)
-
-        logging.info("read grid file and check if grid is compatible")
-        # check if gridfile is needed on first file
-        da = var_from_files(
-            [filelist[0]],
-            varname,
-            level,
-            parallel=True,
-            chunks=chunks,
-            dask_nworkers=dask_nworkers,
+    if gridfile:
+        gd = get_grid(gridfile)
+    # check compatibility of grid, domain and data
+    if domain != "all" and gridfile:
+        check_grid(
+            filelist, gd, varname, level, chunks=chunks, dask_nworkers=dask_nworkers
         )
-        if da.attrs["GRIB_gridType"] == "unstructured" and not gridfile:
-            logging.error("the data grid is unstructured, please provide a grid file!")
-            sys.exit()
-        elif da.attrs["GRIB_gridType"] == "unstructured_grid" and gridfile:
-            # read the grid
-            gd = get_grid(gridfile)
-            # check compatibility
-            if not gd.check_compatibility(da):
-                logging.error("grid and data are not compatible! size mismatch")
-                sys.exit()
-        elif da.attrs["GRIB_gridType"] not in ["unstructured_grid", "rotated_ll"]:
-            logging.error(
-                "no support for domain selection on grid type %s",
-                da.attrs["GRIB_gridType"],
-            )
-            sys.exit()
 
     # read the data
     tstart = time.perf_counter()
@@ -165,24 +249,11 @@ def prepare_data(
     else:
         raise NotImplementedError("Arg to deagg must be 'average', 'sum' or 'no'.")
 
-    if domain != "all":
-        # apply the domain mask
-        if da.attrs["GRIB_gridType"] == "rotated_ll":
-            points = np.stack(
-                [da.longitude.values.flatten(), da.latitude.values.flatten()], axis=1
-            )
-            mask = points_in_domain(points, dom_pts)
-            # apply domain mask
-            da = da.where(mask.reshape(da.longitude.values.shape))
-
-        elif da.attrs["GRIB_gridType"] == "unstructured_grid":
-            # mask grid points outside of the domain
-            gd.mask_domain(dom_pts)
-            mask_da = xr.DataArray(
-                gd.mask, coords={"values": da.coords["values"]}, name="mask"
-            )
-            # apply domain mask
-            da = da.where(~mask_da)  # pylint: disable=invalid-unary-operand-type
+    # apply domain mask if domain is set
+    if domain != "all" and "gd" in locals():
+        da = mask_domain(da, domain, gd)
+    elif domain != "all" and "gd" not in locals():
+        da = mask_domain(da, domain)
 
     # compute average and maximum
     if da.attrs["GRIB_gridType"] == "rotated_ll":
@@ -195,7 +266,86 @@ def prepare_data(
     return da_mean, da_max
 
 
-# pylint: enable=too-many-arguments, too-many-locals
+# pylint: disable=too-many-locals
+def prepare_nn(
+    filelist: List[str],
+    varname: str,
+    lonlat: str,
+    level: int | None = None,
+    gridfile: str | None = None,
+    deagg: str = "no",
+    chunks: Dict[str, int] | None = None,
+    dask_nworkers: int | None = None,
+) -> xr.DataArray:
+    """Get the domain average and domain maximum of a model quantity.
+
+    Parameters
+    ----------
+    filelist : list(str)
+        list of files to read
+    varname : str
+        GRIB shortName of variable to extract
+    lonlat : str
+        Coordinates to consider for nn lookup. Format ('lon,lat').
+    level : int
+        model level index
+    gridfile : str, optional
+        ICON grid file, needed for unstructured grid
+    deagg : str
+        Deaggregation of variable 'average', 'sum' or 'no'. default is 'no'.
+    chunks : Dict(str, int), optional
+        chunk size for each dimension to be loaded.
+    dask_nworkers : int, optional
+        if set, data reading is done in parallel using dask_nworkers workers
+
+    Returns
+    -------
+    da_mean : xarray.DataArray
+        Nearest Neighbour Values
+
+    """
+    # read the data
+    tstart = time.perf_counter()
+    da = var_from_files(
+        filelist,
+        varname,
+        level,
+        parallel=True,
+        chunks=chunks,
+        dask_nworkers=dask_nworkers,
+    )
+    tend = time.perf_counter()
+    telapsed = tend - tstart
+    logging.info("reading time elapsed: %f", telapsed)
+
+    # get grid
+    if gridfile:
+        gd = get_grid(gridfile)
+        # check compatibility of grid and data
+        check_grid(
+            filelist, gd, varname, level, chunks=chunks, dask_nworkers=dask_nworkers
+        )
+
+    if deagg == "no":
+        pass
+    elif deagg == "average":
+        da = deaverage(da)
+    elif deagg == "sum":
+        da = deagg_sum(da)
+    else:
+        raise NotImplementedError("Arg to deagg must be 'average', 'sum' or 'no'.")
+
+    lon, lat = parse_coords(lonlat)
+    if "gd" in locals():  # unstructured grid
+        index = ind_from_nn(gd.cx, gd.cy, lon, lat, verbose=True)
+        da_nn = da.isel({"values": index})
+    else:  # rotated pole
+        x, y = nearest_xy(da.longitude.values, da.latitude.values, lon, lat)
+        da_nn = da.isel(y=y, x=x)
+    return da_nn
+
+
+# pylint: enable=too-many-arguments,too-many-locals
 
 
 # pylint: disable=too-many-locals
@@ -226,13 +376,16 @@ def plot_ts_multiple(
 
     """
     fig, axs = plt.subplots(len(da_dict))
+    # if only one subplot, axs is not subscriptable, hence the hack.
+    if not isinstance(axs, np.ndarray):
+        axs = np.array([axs])
 
     for i, (p_key, p_val) in enumerate(da_dict.items()):
         e_val = xr.DataArray()
         exp_count = 0
         if colors is None:
             # Take the color sequence from a colormap
-            cmap = plt.cm.get_cmap("cividis", len(p_val) + 1)
+            cmap = plt.cm.get_cmap("gist_rainbow", len(p_val) + 1)
         logging.info("Number of Experiments: %i", len(p_val))
         for e_key, e_val in p_val.items():
             logging.info("plotting for parameter %s, exp %s", p_key, e_key)
@@ -271,7 +424,9 @@ def plot_ts_multiple(
             )
         axs[i].legend()
 
-    axs[0].xaxis.set_ticklabels([])
+    for idx, ax in np.ndenumerate(axs):
+        if idx[0] < len(axs) - 1:
+            ax.xaxis.set_ticklabels([])
 
     if save:
         fname = f"timeseries_{e_val.name}_{'-'.join(da_dict.keys())}.png"
@@ -336,7 +491,7 @@ def plot_ts(
 
     # format the time axis labeling
     # ax.xaxis.set_major_locator(mdates.HourLocator(interval=int(len(times)/5)))
-    # ax.xaxis.set_major_formatter(mdates.DateFormatter("%d.%m.%y %H"))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%d.%m.%y %H"))
     ax.tick_params(axis="x", labelrotation=90)
 
     if save:

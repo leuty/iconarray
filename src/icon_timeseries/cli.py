@@ -18,6 +18,7 @@ from .handle_grid import get_grid
 from .plot import plot_domain
 from .plot import plot_ts_multiple
 from .plot import prepare_data
+from .plot import prepare_nn
 
 logging.getLogger(__name__)
 log_format = "%(levelname)8s: %(message)s [%(filename)s:%(lineno)s - %(funcName)s()]"
@@ -151,6 +152,93 @@ def meanmax(
 
     # plot the time series
     plot_ts_multiple(da_dict, domain=domain)
+
+
+@main.command()
+@click.option(
+    "--exp",
+    required=True,
+    type=(str, str),
+    nargs=2,
+    multiple=True,
+    help=(
+        "experiment info. file pattern to files to read, will be expanded to a "
+        "list with glob.glob, and experiment identifier"
+    ),
+)
+@click.option(
+    "--varname", required=True, type=str, help="GRIB shortName of the variable"
+)
+@click.option(
+    "--lonlat",
+    required=True,
+    type=str,
+    help="Coordinates (format 'lon,lat') for nearest neighbour lookup.",
+)
+@click.option("--level", default=None, type=int, help="model level index")
+@click.option(
+    "--gridfile",
+    default=None,
+    type=str,
+    help="ICON grid file, needed for unstructured grid",
+)
+@click.option(
+    "--deagg",
+    default="no",
+    type=str,
+    help="deagreggation of variable: Possible are 'average', 'sum' and 'no'",
+)
+@click.option(
+    "--dask-workers",
+    "dask_nworkers",
+    default=None,
+    type=int,
+    help="ignored if the script does not run on a post-proc node",
+)
+def nearest_neighbour(
+    exp: Tuple[Tuple, ...],
+    varname: str,
+    level: int | None,
+    gridfile: str | None,
+    lonlat: str,
+    deagg: str,
+    dask_nworkers: int | None,
+):  # pylint: disable=too-many-arguments
+    """Plot a time series from GRIB data for given variables and coordinates."""
+    # check dask setup
+    chunks = None
+    if "pp" in os.uname().nodename:
+        logging.info("job is running on %s, dask_nworkers active", os.uname().nodename)
+        logging.info("number of dask workers: %d", dask_nworkers)
+        chunks = {"generalVerticalLayer": 1}
+    elif dask_nworkers and "pp" not in os.uname().nodename:
+        logging.warning(
+            "job is running on %s, dask_nworkers not active", os.uname().nodename
+        )
+        logging.warning("send your job on a post-proc node to activate dask_nworkers")
+        dask_nworkers = None
+
+    # gather data for all experiments
+    da_dict = {"values": {}}  # type: Dict[str, Dict[str, xr.DataArray]]
+    for one_exp in exp:
+        filelist = glob.glob(one_exp[0])
+        if len(filelist) == 0:
+            logging.warning("file list for %s is empty, skipping...", one_exp[0])
+            continue
+        da_point = prepare_nn(
+            filelist,
+            varname,
+            lonlat,
+            level,
+            gridfile,
+            deagg=deagg,
+            chunks=chunks,
+            dask_nworkers=dask_nworkers,
+        )
+        da_dict["values"][one_exp[1]] = da_point
+
+    # plot the time series
+    plot_ts_multiple(da_dict, domain=lonlat)
 
 
 @main.command()
