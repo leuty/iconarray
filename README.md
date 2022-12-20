@@ -1,12 +1,12 @@
 # ICON time series
 Visualise time series of ICON data.
 
-This package provides functionalities to display time series from ICON output files. It handles GRIB input (necdf support is currently being developed) on the native and regular grid. The support for COSMO data should be considered beta...
+This package provides functionalities to display time series from ICON output files. It handles GRIB input (necdf support is currently being developed) on the native and regular grid. Support for COSMO data is implemented but the results should be checked carefully as this feature was not tested beyond a simple plausibility check.
 
 ## Quick start
 1. Create an environment and install the dependencies: `./setup_env.sh -m`
 2. Activate the environment: `conda activate icon_timeseries`
-3. Install the package: `pip install .`
+3. Install the package: `pip install --no-deps .`
 4. Setup ecCodes environment: `./setup_grib_env.sh`
 5. Check the installation: `pytest`
 
@@ -21,7 +21,7 @@ The main functionalities of this package are:
   * unstructured and regular grids
   * ensemble data
   * multiple runs/experiments
-  * optinal dask parallelisation available
+  * optional dask parallelisation available
 * data selection
   * model variable and level to display
   * domain that can be customised
@@ -33,7 +33,7 @@ The main functionalities of this package are:
   * time series visualisation for multiple runs
   * time series visualisation for ensemble data
 
-The functions of the package can be used in scripts or via pre-defined command-line tools. Follwong command-line tools are provided:
+The functions of the package can be used in scripts or via pre-defined command-line tools. Following command-line tools are provided:
 * `icon-timeseries meanmax`: time series of domain average and domain maximum of a model variable on a given level (domain can be customised)
 * `icon-timeseries quicklook-domain`: map plot of the considered domain
 * `icon-timeseries nearest-neighbour`: time series of the values of a model variable at the grid point closest to the given location
@@ -67,7 +67,7 @@ pip install --editable .
 
 ### ecCodes for GRIB decoding
 
-Since this package uses cfgrib to decode GRIB data, make sure to run `./setup_grib_env.sh` with your conda environment active to setup ecCodes correctly. In case of an upgrade of the ecCodes versions and definitions supported by spack, this setup script might need to be updated. If you need a personalised version of ecCodes definitions that is not suported by spack, you can specify the path to your version in `GRIB_DEFINITION_PATH` (and `GRIB_SAMPLES_PATH` if needed) in `./setup_grib_env.sh`.
+Since this package uses cfgrib to decode GRIB data, make sure to run `./setup_grib_env.sh` with your conda environment active to setup ecCodes correctly. In case of an upgrade of the ecCodes versions and definitions supported by spack, this setup script might need to be updated. If you need a personalised version of ecCodes definitions that is not supported by spack, you can specify the path to your version in `GRIB_DEFINITION_PATH` (and `GRIB_SAMPLES_PATH` if needed) in `./setup_grib_env.sh`.
 
 ### Code structure
 
@@ -86,7 +86,7 @@ Once your package is installed, run the tests by typing
 ```
 pytest
 ```
-Make sure to update your requirement files and export your environments after installationnevery time you add new imports while developing. You should add tests for every new feature you add to the package.
+Make sure to update your requirement files and export your environments after installation every time you add new imports while developing. You should add tests for every new feature you add to the package.
 
 ### Development tools
 
