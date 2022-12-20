@@ -50,7 +50,7 @@ def ind_from_nn(lons, lats, lon, lat):
 
     """
     dist = [
-        np.sqrt(((lons[i] - lon) ** 2 + lats[i] - lat) ** 2) for i in range(len(lats))
+        np.sqrt((lons[i] - lon) ** 2 + (lats[i] - lat) ** 2) for i in range(len(lats))
     ]
     ind = np.where(dist == np.min(dist))[0][0]
 
