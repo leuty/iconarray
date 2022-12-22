@@ -49,6 +49,7 @@ def plot_ts_multiple(
     if not isinstance(axs, np.ndarray):
         axs = np.array([axs])
 
+    # loop over parameters
     for i, (p_key, p_val) in enumerate(da_dict.items()):
         e_val = xr.DataArray()
         exp_count = 0
@@ -56,30 +57,32 @@ def plot_ts_multiple(
             # Take the color sequence from a colormap
             cmap = plt.cm.get_cmap("gist_rainbow", len(p_val) + 1)
         logging.info("Number of Experiments: %i", len(p_val))
+
+        # loop over runs/experiments
         for e_key, e_val in p_val.items():
             logging.info("plotting for parameter %s, exp %s", p_key, e_key)
             # set color
             color = cmap(exp_count)
-            # get time information
+
+            # get ensemble size
             try:
-                if e_val.number.shape[0] > 1:
-                    logging.info("Looping over %i members.", e_val.number.shape[0])
-                    plot_ensemble(e_key, e_val, axs[i], color)
-                else:  # ensemble information given, but m is 1-dimensional
-                    vals = e_val.values
-                    try:
-                        time_vals = e_val.valid_time.values
-                    except AttributeError:
-                        time_vals = e_val.time.values
-                    plot_ts(vals, time_vals, ax=axs[i], label=e_key, color=color)
-            except (
+                len_ens = e_val.number.shape[0]
+            except(
                 AttributeError,
                 IndexError,
             ):  # no ensemble coord or dim given or dim is 0d.
+                len_ens = 1
+
+            if len_ens > 1:
+                logging.info("Looping over %i members.", e_val.number.shape[0])
+                plot_ensemble(e_key, e_val, axs[i], color)
+            else:
                 vals = e_val.values
+                time_vals = e_val.valid_time.values
                 plot_ts(vals, time_vals, ax=axs[i], label=e_key, color=color)
 
             exp_count += 1
+
         # set title and legend
         try:
             axs[i].set_title(
