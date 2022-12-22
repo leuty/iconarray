@@ -90,9 +90,9 @@ def main(ctx, **kwargs) -> None:
 )
 @click.option(
     "--deagg",
-    default="no",
-    type=str,
-    help="deagreggation of variable: Possible are 'average', 'sum' and 'no'",
+    is_flag=True,
+    help="deagreggation of variable, method is detected from GRIB encoding "
+    "(de-averaging and de-accumulation are currently implemented)",
 )
 @click.option(
     "--dask-workers",
@@ -108,7 +108,7 @@ def meanmax(
     color: str | None,
     gridfile: str | None,
     domain: str,
-    deagg: str,
+    deagg: bool,
     dask_nworkers: int | None,
 ):  # pylint: disable=too-many-arguments
     """Read data for a variable from GRIB file(s) and plot a domain average and max."""
@@ -184,9 +184,9 @@ def meanmax(
 )
 @click.option(
     "--deagg",
-    default="no",
-    type=str,
-    help="deagreggation of variable: Possible are 'average', 'sum' and 'no'",
+    is_flag=True,
+    help="deagreggation of variable, method is detected from GRIB encoding "
+    "(de-averaging and de-accumulation are currently implemented)",
 )
 @click.option(
     "--dask-workers",
@@ -201,7 +201,7 @@ def nearest_neighbour(
     level: int | None,
     gridfile: str | None,
     lonlat: str,
-    deagg: str,
+    deagg: bool,
     dask_nworkers: int | None,
 ):  # pylint: disable=too-many-arguments
     """Plot a time series from GRIB data for given variables and coordinates."""

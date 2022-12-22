@@ -17,6 +17,7 @@ def deaverage(da: xr.DataArray) -> xr.DataArray:
         DataArray with time-averaged values. Needs valid_time as dimension.
 
     """
+    logging.info("Data deaggregation: de-averaging")
     try:
         _check_time_dim(da)
         subtrahend = da.sel(valid_time=da.valid_time[1:-1])
@@ -44,6 +45,7 @@ def deagg_sum(da: xr.DataArray) -> xr.DataArray:
         DataArray with time-aggregated (summed) values. Needs valid_time as dimension.
 
     """
+    logging.info("Data deaggregation: de-accumulation")
     try:
         _check_time_dim(da)
         subtrahend = da.sel(valid_time=da.valid_time[1:-1])

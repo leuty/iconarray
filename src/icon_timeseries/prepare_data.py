@@ -28,7 +28,7 @@ def prepare_meanmax(
     level: int | None = None,
     gridfile: str | None = None,
     domain: str = "all",
-    deagg: str = "no",
+    deagg: bool = False,
     chunks: Dict[str, int] | None = None,
     dask_nworkers: int | None = None,
 ) -> Tuple[xr.DataArray, xr.DataArray]:
@@ -46,8 +46,9 @@ def prepare_meanmax(
         ICON grid file, needed for unstructured grid
     domain : str
         domain to consider, please define in domains.yaml. default is whole domain
-    deagg : str
-        Deaggregation of variable 'average', 'sum' or 'no'. default is 'no'.
+    deagg : bool
+        Deaggregation of variable, de-averaging and de-accumulation are currently
+        available
     chunks : Dict(str, int), optional
         chunk size for each dimension to be loaded.
     dask_nworkers : int, optional
@@ -84,14 +85,18 @@ def prepare_meanmax(
     telapsed = tend - tstart
     logging.info("reading time elapsed: %f", telapsed)
 
-    if deagg == "no":
+    # data deaggregation
+    if not deagg:
         pass
-    elif deagg == "average":
-        da = deaverage(da)
-    elif deagg == "sum":
+    elif deagg and da.attrs["GRIB_stepType"] == "accum":
         da = deagg_sum(da)
+    elif deagg and da.attrs["GRIB_stepType"] == "avg":
+        da = deaverage(da)
     else:
-        raise NotImplementedError("Arg to deagg must be 'average', 'sum' or 'no'.")
+        logging.error(
+            "No deaggregation method is implemented for %s",
+            da.attrs["GRIB_stepType"]
+        )
 
     # apply domain mask if domain is set
     if domain != "all" and "gd" in locals():
@@ -117,7 +122,7 @@ def prepare_nn(
     lonlat: str,
     level: int | None = None,
     gridfile: str | None = None,
-    deagg: str = "no",
+    deagg: bool = False,
     chunks: Dict[str, int] | None = None,
     dask_nworkers: int | None = None,
 ) -> xr.DataArray:
@@ -135,8 +140,9 @@ def prepare_nn(
         model level index
     gridfile : str, optional
         ICON grid file, needed for unstructured grid
-    deagg : str
-        Deaggregation of variable 'average', 'sum' or 'no'. default is 'no'.
+    deagg : bool
+        Deaggregation of variable, de-averaging and de-accumulation are currently
+        available
     chunks : Dict(str, int), optional
         chunk size for each dimension to be loaded.
     dask_nworkers : int, optional
@@ -170,14 +176,18 @@ def prepare_nn(
             filelist, gd, varname, level, chunks=chunks, dask_nworkers=dask_nworkers
         )
 
-    if deagg == "no":
+    # data deaggregation
+    if not deagg:
         pass
-    elif deagg == "average":
-        da = deaverage(da)
-    elif deagg == "sum":
+    elif deagg and da.attrs["GRIB_stepType"] == "accum":
         da = deagg_sum(da)
+    elif deagg and da.attrs["GRIB_stepType"] == "avg":
+        da = deaverage(da)
     else:
-        raise NotImplementedError("Arg to deagg must be 'average', 'sum' or 'no'.")
+        logging.error(
+            "No deaggregation method is implemented for %s",
+            da.attrs["GRIB_stepType"]
+        )
 
     lon, lat = parse_coords(lonlat)
     if "gd" in locals():  # unstructured grid
