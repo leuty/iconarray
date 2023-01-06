@@ -37,10 +37,9 @@ def deaverage(da: xr.DataArray) -> xr.DataArray:
     deavg = da.copy()
     da_shift = da.sel(valid_time=time[:-1])
     da_shift = da_shift.assign_coords({"valid_time": time[1:]})
-    deavg.loc[{"valid_time": time[1:]}] = (
-        da.sel(valid_time=time[1:]) * n_fcst[1:] -
-        da_shift.sel(valid_time=time[1:]) * (n_fcst[1:] - 1)
-    )
+    deavg.loc[{"valid_time": time[1:]}] = da.sel(valid_time=time[1:]) * n_fcst[
+        1:
+    ] - da_shift.sel(valid_time=time[1:]) * (n_fcst[1:] - 1)
 
     deavg.attrs["GRIB_stepType"] = "instant"
     return deavg
@@ -88,7 +87,7 @@ def _fix_time_name(da: xr.DataArray) -> xr.DataArray:
         DataArray to check
 
     """
-    if not "valid_time" in da.dims:
+    if "valid_time" not in da.dims:
         da = da.swap_dims({"time": "valid_time"})
 
     return da
@@ -135,15 +134,16 @@ def _check_time_steps(da: xr.DataArray) -> float:
     Returns
     -------
     dt : float
-        minimal occuring time difference between forecast time in data set
+        minimal occurring time difference between forecast time in data set
 
     """
     # get steps between available forecast times
     dt = np.unique(da.valid_time[1:].values - da.valid_time[:-1].values)
     # check for irregularities
     if len(dt) != 1:
-        logging.warning("Found irregular time spacing in data. Deaggregation might "
-        "be wrong.")
+        logging.warning(
+            "Found irregular time spacing in data. Deaggregation might be wrong."
+        )
     dt = min(dt)
     logging.info("Detected time step: %d", dt)
 

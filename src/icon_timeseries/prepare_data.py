@@ -94,8 +94,7 @@ def prepare_meanmax(
         da = deaverage(da)
     else:
         logging.error(
-            "No deaggregation method is implemented for %s",
-            da.attrs["GRIB_stepType"]
+            "No deaggregation method is implemented for %s", da.attrs["GRIB_stepType"]
         )
 
     # apply domain mask if domain is set
@@ -185,8 +184,7 @@ def prepare_nn(
         da = deaverage(da)
     else:
         logging.error(
-            "No deaggregation method is implemented for %s",
-            da.attrs["GRIB_stepType"]
+            "No deaggregation method is implemented for %s", da.attrs["GRIB_stepType"]
         )
 
     lon, lat = parse_coords(lonlat)

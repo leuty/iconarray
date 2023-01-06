@@ -67,7 +67,7 @@ def plot_ts_multiple(
             # get ensemble size
             try:
                 len_ens = e_val.number.shape[0]
-            except(
+            except (
                 AttributeError,
                 IndexError,
             ):  # no ensemble coord or dim given or dim is 0d.
