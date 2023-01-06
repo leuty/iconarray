@@ -12,7 +12,7 @@ def deaverage(da: xr.DataArray) -> xr.DataArray:
 
     x_{n} = n * x_{n} + (n - 1) * x_{n-1}
 
-    Lead time +0h and +1h are ignored, because there is nothin to deaggreagate.
+    Lead time +0h and +1h are ignored, because there is nothing to deaggreagate.
 
     Parameters
     ----------
