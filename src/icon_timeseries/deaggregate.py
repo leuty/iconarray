@@ -63,14 +63,19 @@ def deagg_sum(da: xr.DataArray) -> xr.DataArray:
     _check_time_dim(da)
 
     # check for irregularities in time steps
-    _ = _check_time_steps(da)
+    dt = _check_time_steps(da)
 
-    subtrahend = da.sel(valid_time=da.valid_time[1:-1])
-    subtrahend = subtrahend.assign_coords({"valid_time": da.valid_time[2:]})
-    deaggd = da
-    deaggd.loc[{"valid_time": da.valid_time[2:]}] = (
-        da.loc[{"valid_time": da.valid_time[2:]}] - subtrahend
-    )
+    # ignore lead time 0, catch if time (ini time) is not an attribute in da
+    try:
+        time = da.valid_time[da.valid_time >= (da.time[0] + dt)]
+    except AttributeError:
+        logging.warning(
+            "No Initial time found in dataset. Assuming first valid_time "
+            "entry is the initial time"
+        )
+        time = da.valid_time[da.valid_time >= (da.valid_time[0] + dt)]
+    # deaggregation from LT 1h, we can include LT 0 in the subtrahend, should be ~0
+    deaggd = da.loc[{"valid_time": time}].diff(dim="valid_time", n=1, label="upper")
     deaggd.attrs["GRIB_stepType"] = "instant"
     return deaggd
 
