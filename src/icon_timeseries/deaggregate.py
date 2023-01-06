@@ -27,16 +27,23 @@ def deaverage(da: xr.DataArray) -> xr.DataArray:
     # define time step and check for irregularities
     dt = _check_time_steps(da)
 
-    subtrahend = da.sel(valid_time=da.valid_time[1:-1])
-    subtrahend = subtrahend.assign_coords({"valid_time": da.valid_time[2:]})
-    dt = da.valid_time[1] - da.valid_time[0]  # improve with unique and catch irregular
-    n_fcst = ((da.valid_time[2:] - da.valid_time[0]) / dt).astype(np.int32)  # ns to h
-    deavd = da
-    deavd.loc[{"valid_time": da.valid_time[2:]}] = da * n_fcst - subtrahend * (
-        n_fcst - 1
+    # get time step number
+    n_fcst = ((da.valid_time - da.time[0]) / dt).astype(np.int32)
+    # ignore lead time 0
+    time = da.valid_time[n_fcst >= 1]
+    n_fcst = n_fcst[n_fcst >= 1]
+
+    # deaverage the data leaving out the first considered lead time
+    deavg = da.copy()
+    da_shift = da.sel(valid_time=time[:-1])
+    da_shift = da_shift.assign_coords({"valid_time": time[1:]})
+    deavg.loc[{"valid_time": time[1:]}] = (
+        da.sel(valid_time=time[1:]) * n_fcst[1:] -
+        da_shift.sel(valid_time=time[1:]) * (n_fcst[1:] - 1)
     )
-    deavd.attrs["GRIB_stepType"] = "instant"
-    return deavd
+
+    deavg.attrs["GRIB_stepType"] = "instant"
+    return deavg
 
 
 def deagg_sum(da: xr.DataArray) -> xr.DataArray:
