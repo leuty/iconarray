@@ -75,7 +75,10 @@ def deagg_sum(da: xr.DataArray) -> xr.DataArray:
         )
         time = da.valid_time[da.valid_time >= (da.valid_time[0] + dt)]
     # deaggregation from LT 1h, we can include LT 0 in the subtrahend, should be ~0
-    deaggd = da.loc[{"valid_time": time}].diff(dim="valid_time", n=1, label="upper")
+    deaggd = da.copy()
+    deaggd.loc[{"valid_time": time[1:]}] = da.sel(valid_time=time).diff(
+        dim="valid_time", n=1, label="upper"
+    )
     deaggd.attrs["GRIB_stepType"] = "instant"
     return deaggd
 
