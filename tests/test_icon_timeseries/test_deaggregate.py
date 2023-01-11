@@ -17,7 +17,7 @@ def _create_test_da() -> xr.DataArray:
     x = np.arange(0, 5, dtype="int32")
     smpl_coords = (t, x)
     smpl_da = xr.DataArray(smpl_data, dims=["valid_time", "x"], coords=smpl_coords)
-    smpl_da = smpl_da.assign_coords(time=("valid_time", t_start))
+    smpl_da = smpl_da.assign_coords(ini_time=("valid_time", t_start))
     return smpl_da
 
 

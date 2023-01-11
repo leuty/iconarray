@@ -30,7 +30,7 @@ def deaverage(da: xr.DataArray) -> xr.DataArray:
     dt = _check_time_steps(da)
 
     # get time step number
-    n_fcst = ((da.valid_time - da.time[0]) / dt).astype(np.int32)
+    n_fcst = ((da.valid_time - da.ini_time[0]) / dt).astype(np.int32)
     # ignore lead time 0
     time = da.valid_time[n_fcst >= 1]
     n_fcst = n_fcst[n_fcst >= 1]
@@ -65,15 +65,9 @@ def deagg_sum(da: xr.DataArray) -> xr.DataArray:
     # check for irregularities in time steps
     dt = _check_time_steps(da)
 
-    # ignore lead time 0, catch if time (ini time) is not an attribute in da
-    try:
-        time = da.valid_time[da.valid_time >= (da.time[0] + dt)]
-    except AttributeError:
-        logging.warning(
-            "No Initial time found in dataset. Assuming first valid_time "
-            "entry is the initial time"
-        )
-        time = da.valid_time[da.valid_time >= (da.valid_time[0] + dt)]
+    # ignore lead time 0
+    time = da.valid_time[da.valid_time >= (da.ini_time[0] + dt)]
+
     # deaggregation from LT 1h, we can include LT 0 in the subtrahend, should be ~0
     deaggd = da.copy()
     deaggd.loc[{"valid_time": time[1:]}] = da.sel(valid_time=time).diff(
@@ -99,6 +93,7 @@ def _fix_time_name(da: xr.DataArray) -> xr.DataArray:
     """
     if "valid_time" not in da.dims:
         da = da.swap_dims({"time": "valid_time"})
+        raise KeyError("Valid Time Coordinate missing.")
 
     return da
 

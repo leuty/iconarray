@@ -9,6 +9,7 @@ from typing import List
 from typing import Mapping
 
 # Third-party
+import numpy as np
 import xarray as xr
 from dask.distributed import Client
 from dask.distributed import LocalCluster
@@ -114,9 +115,19 @@ def var_from_files(
 
     try:
         if da.number.shape[0] > 1:
+            # this is a bit hacky: we first copy the coordinate (not dim) time
+            # to ini_time and then manipulate time, which is dropped during the
+            # unstack. The rename at the bottom is necessary to catch all non-
+            # ensemble cases.
             logging.info("Found multiple ensemble members. Reshaping ensemble data.")
-            da = da.set_xindex(["valid_time", "number"])
+            da = da.assign_coords({"ini_time": da.time})
+            # type ignore on the following line: known for some versions of xarray,
+            # see e.g. https://github.com/pydata/xarray/issues/6576
+            da = da.set_index(
+                {"time": ["valid_time", "number"]}, append=False  # type:ignore
+            )
             da = da.unstack("time")
+            da = _reshape_initime(da)
         else:
             logging.info("Only one ensemble member found. Continuing.")
     except IndexError:
@@ -124,7 +135,26 @@ def var_from_files(
     except AttributeError:
         logging.info("No dimension for ensemble information found. Continuing.")
 
+    if "time" in da.coords:  # rename time for all non-ensemble cases.
+        da = da.assign_coords({"ini_time": da.time})
+        da = da.set_index({"time": "ini_time"})
+        da = da.reset_index("time")
+        da = da.reset_coords("time", drop=True)
+
     return da
 
 
 # pylint: enable=too-many-arguments
+
+
+def _reshape_initime(da: xr.DataArray) -> xr.DataArray:
+    """Reshape initial time to 1D array with length valid_time."""
+    index_ensdim = da.ini_time.dims.index("number")
+    initime_reduced = np.unique(da.ini_time, axis=index_ensdim)
+    initime_reduced = np.squeeze(initime_reduced)
+    del da.coords["ini_time"]
+    da = da.assign_coords({"ini_time": ("valid_time", initime_reduced)})
+    if len(da.ini_time.shape) > 1:
+        raise RuntimeError("Ensemble members have non-identical initial times.")
+
+    return da
