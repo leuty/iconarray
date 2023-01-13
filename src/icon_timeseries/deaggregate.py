@@ -7,6 +7,34 @@ import numpy as np
 import xarray as xr
 
 
+def deaggregate(da: xr.DataArray) -> xr.DataArray:
+    """Deaggregate accumulated output values over valid times.
+
+    Apply deagg_sum or deaverage over groups with identical initial times.
+
+    Parameters
+    ----------
+    da : xarray.DataArray
+        DataArray with time-aggregated values. Needs valid_time as dimension
+        and valid_time and ini_time as coordinate.
+
+    """
+    logging.info("Data deaggregation: Searching for accumulation info.")
+
+    # check if time dimension is at least 2 long
+    _check_time_dim(da)
+
+    if da.attrs["GRIB_stepType"] == "accum":
+        da = da.groupby("ini_time").map(deagg_sum)
+    elif da.attrs["GRIB_stepType"] == "avg":
+        da = da.groupby("ini_time").map(deaverage)
+    else:
+        logging.error(
+            "No deaggregation method is implemented for %s", da.attrs["GRIB_stepType"]
+        )
+    return da
+
+
 def deaverage(da: xr.DataArray) -> xr.DataArray:
     """Deaverage (over valid_time).
 
@@ -17,14 +45,11 @@ def deaverage(da: xr.DataArray) -> xr.DataArray:
     Parameters
     ----------
     da : xarray.DataArray
-        DataArray with time-averaged values. Needs valid_time as dimension.
+        DataArray with time-averaged values. Needs valid_time as dimension and
+        valid_time as a coordinate.
 
     """
     logging.info("Data deaggregation: de-averaging")
-    # fix name of time dimension
-    da = _fix_time_name(da)
-    # check if time dimension is at least 2 long
-    _check_time_dim(da)
 
     # define time step and check for irregularities
     dt = _check_time_steps(da)
@@ -53,14 +78,11 @@ def deagg_sum(da: xr.DataArray) -> xr.DataArray:
     Parameters
     ----------
     da : xarray.DataArray
-        DataArray with time-aggregated (summed) values. Needs valid_time as dimension.
+        DataArray with time-aggregated (summed) values. Needs valid_time as dimension
+        and valid_time as a coordinate.
 
     """
     logging.info("Data deaggregation: de-accumulation")
-    # fix name of time dimension
-    da = _fix_time_name(da)
-    # check if time dimension is at least 2 long
-    _check_time_dim(da)
 
     # check for irregularities in time steps
     dt = _check_time_steps(da)
@@ -75,27 +97,6 @@ def deagg_sum(da: xr.DataArray) -> xr.DataArray:
     )
     deaggd.attrs["GRIB_stepType"] = "instant"
     return deaggd
-
-
-def _fix_time_name(da: xr.DataArray) -> xr.DataArray:
-    """Check if valid_time is present, otherwise rename time dimension.
-
-    Parameters
-    ----------
-    da : xarray.DataArray
-        DataArray to check
-
-    Returns
-    -------
-    da : xarray.DataArray
-        DataArray to check
-
-    """
-    if "valid_time" not in da.dims:
-        da = da.swap_dims({"time": "valid_time"})
-        raise KeyError("Valid Time Coordinate missing.")
-
-    return da
 
 
 def _check_time_dim(da: xr.DataArray) -> None:

@@ -10,8 +10,7 @@ from typing import Tuple
 import xarray as xr
 
 # Local
-from .deaggregate import deagg_sum
-from .deaggregate import deaverage
+from .deaggregate import deaggregate
 from .handle_grid import get_grid
 from .read_grib import var_from_files
 from .utils import check_grid
@@ -88,14 +87,8 @@ def prepare_meanmax(
     # data deaggregation
     if not deagg:
         pass
-    elif deagg and da.attrs["GRIB_stepType"] == "accum":
-        da = deagg_sum(da)
-    elif deagg and da.attrs["GRIB_stepType"] == "avg":
-        da = deaverage(da)
     else:
-        logging.error(
-            "No deaggregation method is implemented for %s", da.attrs["GRIB_stepType"]
-        )
+        da = deaggregate(da)
 
     # apply domain mask if domain is set
     if domain != "all" and "gd" in locals():
@@ -178,14 +171,8 @@ def prepare_nn(
     # data deaggregation
     if not deagg:
         pass
-    elif deagg and da.attrs["GRIB_stepType"] == "accum":
-        da = deagg_sum(da)
-    elif deagg and da.attrs["GRIB_stepType"] == "avg":
-        da = deaverage(da)
     else:
-        logging.error(
-            "No deaggregation method is implemented for %s", da.attrs["GRIB_stepType"]
-        )
+        da = deaggregate(da)
 
     lon, lat = parse_coords(lonlat)
     if "gd" in locals():  # unstructured grid

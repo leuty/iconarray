@@ -127,6 +127,7 @@ def var_from_files(
                 {"time": ["valid_time", "number"]}, append=False  # type:ignore
             )
             da = da.unstack("time")
+            # da = da.swap_dims({"valid_time" : "ntime"})
             da = _reshape_initime(da)
         else:
             logging.info("Only one ensemble member found. Continuing.")
@@ -136,15 +137,36 @@ def var_from_files(
         logging.info("No dimension for ensemble information found. Continuing.")
 
     if "time" in da.coords:  # rename time for all non-ensemble cases.
-        da = da.assign_coords({"ini_time": da.time})
-        da = da.set_index({"time": "ini_time"})
-        da = da.reset_index("time")
-        da = da.reset_coords("time", drop=True)
+        da = da.assign_coords({"ini_time": ("time", da.coords["time"].copy().values)})
+        da = _fix_time_name(da)
 
     return da
 
 
 # pylint: enable=too-many-arguments
+
+
+def _fix_time_name(da: xr.DataArray) -> xr.DataArray:
+    """Check if valid_time is present, otherwise rename time dimension.
+
+    Parameters
+    ----------
+    da : xarray.DataArray
+        DataArray to check
+
+    Returns
+    -------
+    da : xarray.DataArray
+        DataArray to check
+
+    """
+    if "valid_time" not in da.dims:
+        try:
+            da = da.swap_dims({"time": "valid_time"})
+        except ValueError:
+            logging.warning("Time dimension is empty. Only ok if this is a grid file.")
+
+    return da
 
 
 def _reshape_initime(da: xr.DataArray) -> xr.DataArray:

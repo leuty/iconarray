@@ -165,6 +165,7 @@ def plot_ts(
     # ax.xaxis.set_major_locator(mdates.HourLocator(interval=int(len(times)/5)))
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%d.%m.%y %H"))
     ax.tick_params(axis="x", labelrotation=90)
+    ax.grid(True, which="both", axis="both")
 
     if save:
         fname = "timeseries.png"
@@ -198,10 +199,8 @@ def plot_ensemble(
         Axes object on which the time series has been plotted.
 
     """
-    try:
-        time_vals = e_val.valid_time.values
-    except AttributeError:
-        time_vals = e_val.time.values
+    time_vals = e_val.valid_time.values
+
     for m in e_val.number:
         vals = e_val.sel(number=m).values
         # plot
