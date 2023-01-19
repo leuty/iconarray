@@ -126,8 +126,9 @@ def var_from_files(
             da = da.set_index(
                 {"time": ["valid_time", "number"]}, append=False  # type:ignore
             )
+            # check if valid_time is unique
+            _check_index_isunique(da)
             da = da.unstack("time")
-            # da = da.swap_dims({"valid_time" : "ntime"})
             da = _reshape_initime(da)
         else:
             logging.info("Only one ensemble member found. Continuing.")
@@ -180,3 +181,26 @@ def _reshape_initime(da: xr.DataArray) -> xr.DataArray:
         raise RuntimeError("Ensemble members have non-identical initial times.")
 
     return da
+
+
+def _check_index_isunique(da: xr.DataArray) -> None:
+    """Check if time steps in the data sets are unique.
+
+    Parameters
+    ----------
+    da : xarray.DataArray
+        DataArray must have valid_time as an attribute (variable, coord, dim)
+
+    Raises
+    ------
+    NotImplementedError
+        if time steps are not unique
+
+    """
+    # if da.index.shape != da.index.unique().shape:
+    if da.indexes["time"].shape != da.indexes["time"].unique().shape:
+        logging.error("Either valid time or ens members in data are not unique.")
+        raise NotImplementedError(
+            "Non-unique combinations of members and valid times are not supported "
+            "for deaggregation. Maybe you have overlapping forecasts?"
+        )
