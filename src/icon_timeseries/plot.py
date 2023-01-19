@@ -309,12 +309,13 @@ def plot_histograms(
     else:
         bins = np.linspace(min_bin, max_bin, nbins)
 
+    # Take the color sequence from a colormap, analogous to timeseries
+    cmap = plt.cm.get_cmap("gist_rainbow", len(da_dict) + 1)
+
     logging.info("Number of experiments to plot: %i", len(da_dict))
     # loop over runs/experiments
-    e_val = xr.DataArray()  # pylint needs to have the loop variable defined
+    e_val: xr.DataArray = xr.DataArray()  # pylint needs to have the loop variable
     for i, (e_key, e_val) in enumerate(da_dict.items()):
-        # Take the color sequence from a colormap
-        cmap = plt.cm.get_cmap("gist_rainbow", len(e_val) + 1)
         # loop over runs/experiments
         logging.info("histogram plotting for exp %s", e_key)
         # set color
