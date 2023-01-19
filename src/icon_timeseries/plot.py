@@ -283,3 +283,61 @@ def plot_domain(
         logging.info("saved figure %s", fname)
 
     return fig
+
+
+# pylint: disable=too-many-arguments, too-many-locals
+def plot_histograms(
+    da_dict: dict[str, xr.DataArray],
+    domain: str | None = None,
+    min_bin: float = 0.1,
+    max_bin: float = 100.0,
+    nbins: int = 50,
+    logbins: bool = False,
+) -> tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
+    """Draw a histogram plot for a dataset over a given domain."""
+    logging.info("Histogram plotting started...")
+    fig, axs = plt.subplots(len(da_dict), sharex=True)
+    # if only one subplot, axs is not subscriptable, hence the hack.
+    if not isinstance(axs, np.ndarray):
+        axs = np.array([axs])
+
+    # prepare bins
+    # https://stackoverflow.com/questions/6855710/
+    # how-to-have-logarithmic-bins-in-a-python-histogram
+    if logbins:
+        bins = 10.0 ** np.linspace(np.log10(min_bin), np.log10(max_bin), nbins)
+    else:
+        bins = np.linspace(min_bin, max_bin, nbins)
+
+    logging.info("Number of experiments to plot: %i", len(da_dict))
+    # loop over runs/experiments
+    e_val = xr.DataArray()  # pylint needs to have the loop variable defined
+    for i, (e_key, e_val) in enumerate(da_dict.items()):
+        # Take the color sequence from a colormap
+        cmap = plt.cm.get_cmap("gist_rainbow", len(e_val) + 1)
+        # loop over runs/experiments
+        logging.info("histogram plotting for exp %s", e_key)
+        # set color
+        color = cmap(i)
+        vals = e_val.values.flatten()
+        counts, bin_edges = np.histogram(vals, bins)
+        axs[i].bar(bin_edges[:-1], counts, align="edge", color=color)
+        axs[i].set_title(f"EXP {e_key}")
+        axs[i].set_xlabel(f"{e_val.name} ({e_val.GRIB_units})")
+        axs[i].set_ylabel("Frequency count (-)")
+        axs[i].grid(True, which="both", axis="both", linestyle="--")
+        if logbins:
+            axs[i].set_xscale("log")
+
+    ylims = np.array([ax.get_ylim() for ax in axs])
+    ylim_max = ylims[:, 1].max()
+    for ax in axs:
+        ax.set_ylim(0, ylim_max)
+
+    fig.suptitle(f"Histogram plots for domain {domain}")
+    fname = f"histograms_{e_val.name}_{'-'.join(da_dict.keys())}.png"
+    fig.set_size_inches(8.0, 15.0)
+    fig.savefig(fname, dpi=300)
+    logging.info("saved figure %s", fname)
+
+    return fig, axs
