@@ -20,7 +20,7 @@ from dask.distributed import performance_report
 xr.set_options(keep_attrs=True)
 
 
-# pylint: disable=too-many-arguments, too-many-branches, too-many-statements
+# pylint: disable=too-many-arguments
 def var_from_files(
     filelist: List[str],
     varname: str,
@@ -72,9 +72,6 @@ def var_from_files(
     }
 
     # setup the dask cluster if requested
-    # This leads to quite some code duplication because of the dask report and
-    # causes pylint to throw too-many-branches and too-many-arguments...
-    # This (and the generation of the report) should be revised
     if dask_nworkers:
         cluster = LocalCluster()
         cluster.scale(dask_nworkers)
@@ -149,7 +146,7 @@ def var_from_files(
     return da
 
 
-# pylint: enable=too-many-arguments, too-many-branches, too-many-statements
+# pylint: enable=too-many-arguments
 
 
 def _open_icondataset(
