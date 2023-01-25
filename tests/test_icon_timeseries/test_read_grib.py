@@ -19,9 +19,9 @@ def test_read():
     assert da.GRIB_shortName == "T", "da should contain the variable T"
     assert sorted(da.dims) == [
         "generalVerticalLayer",
-        "time",
+        "valid_time",
         "values",
-    ], "da should have the dimensions 'time', 'generalVerticalLayer' and 'values'"
+    ], "da should have the dimensions 'valid_time', 'generalVerticalLayer' and 'values'"
 
 
 def test_read_parallel():
@@ -34,6 +34,6 @@ def test_read_parallel():
     assert da.GRIB_shortName == "T", "da should contain the variable T"
     assert sorted(da.dims) == [
         "generalVerticalLayer",
-        "time",
+        "valid_time",
         "values",
-    ], "da should have the dimensions 'time', 'generalVerticalLayer' and 'values'"
+    ], "da should have the dimensions 'valid_time', 'generalVerticalLayer' and 'values'"

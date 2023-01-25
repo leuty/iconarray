@@ -36,7 +36,7 @@ def test_ts():
         80,
         gridfile,
         domain=domain,
-        deagg="no",
+        deagg=False,
     )
     plot_ts(da_mean.values, da_mean.valid_time.values)
     np.testing.assert_array_equal(
