@@ -6,6 +6,7 @@ import time
 from typing import Any
 from typing import Dict
 from typing import List
+from typing import Literal
 from typing import Mapping
 
 # Third-party
@@ -19,7 +20,7 @@ from dask.distributed import performance_report
 xr.set_options(keep_attrs=True)
 
 
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments, too-many-branches, too-many-statements
 def var_from_files(
     filelist: List[str],
     varname: str,
@@ -71,6 +72,9 @@ def var_from_files(
     }
 
     # setup the dask cluster if requested
+    # This leads to quite some code duplication because of the dask report and
+    # causes pylint to throw too-many-branches and too-many-arguments...
+    # This (and the generation of the report) should be revised
     if dask_nworkers:
         cluster = LocalCluster()
         cluster.scale(dask_nworkers)
@@ -83,16 +87,17 @@ def var_from_files(
         )
 
         with performance_report(filename=dask_report):
-            ds = xr.open_mfdataset(
+            ds = _open_icondataset(
                 filelist,
-                concat_dim="time",
-                combine="nested",
                 parallel=parallel,
                 **kwargs,
             )
+
     else:
-        ds = xr.open_mfdataset(
-            filelist, concat_dim="time", combine="nested", parallel=parallel, **kwargs
+        ds = _open_icondataset(
+            filelist,
+            parallel=parallel,
+            **kwargs,
         )
 
     # selection
@@ -144,7 +149,61 @@ def var_from_files(
     return da
 
 
-# pylint: enable=too-many-arguments
+# pylint: enable=too-many-arguments, too-many-branches, too-many-statements
+
+
+def _open_icondataset(
+    filelist: List[str],
+    concat_dim: str = "time",
+    combine: Literal["by_coords", "nested"] = "nested",
+    parallel: bool = False,
+    **kwargs: Any,
+) -> xr.Dataset:
+    """Open a dataset from a list of ICON / COSMO GRIB files.
+
+    Wrapper for xr.open_mfdataset for better exception handling.
+
+    Parameter
+    ---------
+    filelist : list
+        List of files to open
+    concat_dim : str
+        Dimension to concatenate along
+    combine : str
+        How to combine the files
+    parallel : bool
+        Whether to parallelize the reading
+    kwargs : dict
+        Additional keyword arguments passed to xr.open_mfdataset
+
+    Returns
+    -------
+    ds : xarray.Dataset
+        Dataset containing the data from the files
+
+    Raises
+    ------
+    ValueError
+        If the ensemble dimension is not present in all files
+
+    """
+    try:
+        ds = xr.open_mfdataset(
+            filelist,
+            concat_dim=concat_dim,
+            combine=combine,
+            parallel=parallel,
+            **kwargs,
+        )
+    except ValueError as e:
+        if str(e).startswith("'number' not present in all datasets"):
+            logging.error(
+                "The ensemble dimension is not present in all files. "
+                "Check your file list or the GRIB encoding. Or do you maybe "
+                "read in the constant file? "
+            )
+        raise ValueError(e) from e
+    return ds
 
 
 def _fix_time_name(da: xr.DataArray) -> xr.DataArray:
@@ -201,6 +260,6 @@ def _check_index_isunique(da: xr.DataArray) -> None:
     if da.indexes["time"].shape != da.indexes["time"].unique().shape:
         logging.error("Either valid time or ens members in data are not unique.")
         raise NotImplementedError(
-            "Non-unique combinations of members and valid times are not supported "
-            "for deaggregation. Maybe you have overlapping forecasts?"
+            "Non-unique combinations of members and valid times are not supported. "
+            "Maybe you have overlapping forecasts?"
         )

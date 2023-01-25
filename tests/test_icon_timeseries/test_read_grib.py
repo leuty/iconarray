@@ -21,7 +21,7 @@ def test_read():
         "generalVerticalLayer",
         "valid_time",
         "values",
-    ], "da should have the dimensions 'time', 'generalVerticalLayer' and 'values'"
+    ], "da should have the dimensions 'valid_time', 'generalVerticalLayer' and 'values'"
 
 
 def test_read_parallel():
