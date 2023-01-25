@@ -19,7 +19,7 @@ from dask.distributed import performance_report
 xr.set_options(keep_attrs=True)
 
 
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments, too-many-branches, too-many-statements
 def var_from_files(
     filelist: List[str],
     varname: str,
@@ -71,6 +71,9 @@ def var_from_files(
     }
 
     # setup the dask cluster if requested
+    # This leads to quite some code duplication because of the dask report and
+    # causes pylint to throw too-many-branches and too-many-arguments...
+    # This (and the generation of the report) should be revised
     if dask_nworkers:
         cluster = LocalCluster()
         cluster.scale(dask_nworkers)
@@ -83,6 +86,25 @@ def var_from_files(
         )
 
         with performance_report(filename=dask_report):
+            try:
+                ds = xr.open_mfdataset(
+                    filelist,
+                    concat_dim="time",
+                    combine="nested",
+                    parallel=parallel,
+                    **kwargs,
+                )
+            except ValueError as e:
+                if str(e).startswith("'number' not present in all datasets"):
+                    logging.error(
+                        "The ensemble dimension is not present in all files. "
+                        "Check your file list or the GRIB encoding. Or do you maybe "
+                        "read in the constant file? "
+                    )
+                raise ValueError(e) from e
+
+    else:
+        try:
             ds = xr.open_mfdataset(
                 filelist,
                 concat_dim="time",
@@ -90,10 +112,14 @@ def var_from_files(
                 parallel=parallel,
                 **kwargs,
             )
-    else:
-        ds = xr.open_mfdataset(
-            filelist, concat_dim="time", combine="nested", parallel=parallel, **kwargs
-        )
+        except ValueError as e:
+            if str(e).startswith("'number' not present in all datasets"):
+                logging.error(
+                    "The ensemble dimension is not present in all files. "
+                    "Check your file list or the GRIB encoding. Or do you maybe "
+                    "read in the constant file? "
+                )
+            raise ValueError(e) from e
 
     # selection
     try:
@@ -144,7 +170,7 @@ def var_from_files(
     return da
 
 
-# pylint: enable=too-many-arguments
+# pylint: enable=too-many-arguments, too-many-branches, too-many-statements
 
 
 def _fix_time_name(da: xr.DataArray) -> xr.DataArray:
