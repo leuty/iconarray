@@ -6,6 +6,7 @@ import time
 from typing import Any
 from typing import Dict
 from typing import List
+from typing import Literal
 from typing import Mapping
 
 # Third-party
@@ -86,40 +87,18 @@ def var_from_files(
         )
 
         with performance_report(filename=dask_report):
-            try:
-                ds = xr.open_mfdataset(
-                    filelist,
-                    concat_dim="time",
-                    combine="nested",
-                    parallel=parallel,
-                    **kwargs,
-                )
-            except ValueError as e:
-                if str(e).startswith("'number' not present in all datasets"):
-                    logging.error(
-                        "The ensemble dimension is not present in all files. "
-                        "Check your file list or the GRIB encoding. Or do you maybe "
-                        "read in the constant file? "
-                    )
-                raise ValueError(e) from e
-
-    else:
-        try:
-            ds = xr.open_mfdataset(
+            ds = _open_icondataset(
                 filelist,
-                concat_dim="time",
-                combine="nested",
                 parallel=parallel,
                 **kwargs,
             )
-        except ValueError as e:
-            if str(e).startswith("'number' not present in all datasets"):
-                logging.error(
-                    "The ensemble dimension is not present in all files. "
-                    "Check your file list or the GRIB encoding. Or do you maybe "
-                    "read in the constant file? "
-                )
-            raise ValueError(e) from e
+
+    else:
+        ds = _open_icondataset(
+            filelist,
+            parallel=parallel,
+            **kwargs,
+        )
 
     # selection
     try:
@@ -171,6 +150,60 @@ def var_from_files(
 
 
 # pylint: enable=too-many-arguments, too-many-branches, too-many-statements
+
+
+def _open_icondataset(
+    filelist: List[str],
+    concat_dim: str = "time",
+    combine: Literal["by_coords", "nested"] = "nested",
+    parallel: bool = False,
+    **kwargs: Any,
+) -> xr.Dataset:
+    """Open a dataset from a list of ICON / COSMO GRIB files.
+
+    Wrapper for xr.open_mfdataset for better exception handling.
+
+    Parameter
+    ---------
+    filelist : list
+        List of files to open
+    concat_dim : str
+        Dimension to concatenate along
+    combine : str
+        How to combine the files
+    parallel : bool
+        Whether to parallelize the reading
+    kwargs : dict
+        Additional keyword arguments passed to xr.open_mfdataset
+
+    Returns
+    -------
+    ds : xarray.Dataset
+        Dataset containing the data from the files
+
+    Raises
+    ------
+    ValueError
+        If the ensemble dimension is not present in all files
+
+    """
+    try:
+        ds = xr.open_mfdataset(
+            filelist,
+            concat_dim=concat_dim,
+            combine=combine,
+            parallel=parallel,
+            **kwargs,
+        )
+    except ValueError as e:
+        if str(e).startswith("'number' not present in all datasets"):
+            logging.error(
+                "The ensemble dimension is not present in all files. "
+                "Check your file list or the GRIB encoding. Or do you maybe "
+                "read in the constant file? "
+            )
+        raise ValueError(e) from e
+    return ds
 
 
 def _fix_time_name(da: xr.DataArray) -> xr.DataArray:
