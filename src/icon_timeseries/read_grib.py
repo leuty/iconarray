@@ -201,6 +201,6 @@ def _check_index_isunique(da: xr.DataArray) -> None:
     if da.indexes["time"].shape != da.indexes["time"].unique().shape:
         logging.error("Either valid time or ens members in data are not unique.")
         raise NotImplementedError(
-            "Non-unique combinations of members and valid times are not supported "
-            "for deaggregation. Maybe you have overlapping forecasts?"
+            "Non-unique combinations of members and valid times are not supported. "
+            "Maybe you have overlapping forecasts?"
         )
