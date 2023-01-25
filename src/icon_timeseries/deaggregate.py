@@ -115,8 +115,9 @@ def _check_time_dim(da: xr.DataArray) -> None:
     """
     if da.valid_time.shape == ():
         logging.error(
-            "The time dimension of the given data must be longer"
-            "than one for deaggregation."
+            "The time dimension of the given data must be longer "
+            "than the one for deaggregation. "
+            "Maybe you specified just one time step (no deaggragation possible)?"
         )
         raise IndexError
     elif da.valid_time.shape[0] < 2:
