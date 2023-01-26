@@ -31,7 +31,7 @@ documentation = "https://github.io/clairemerker/icon-timeseries"
 
 [project.scripts]
 # Format: <command> = "<package>.<module>:<function>"
-# icon-timeseries = "icon_timeseries.cli:main"
+icon-timeseries = "icon_timeseries.cli:main"
 
 # resources to include
 [tool.setuptools.package-data]
