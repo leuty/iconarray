@@ -1,15 +1,17 @@
 # Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
-_commit: 6de6638
+_commit: v0.2.0-10-gce59cbf
 _src_path: git@github.com:MeteoSwiss-APN/mch-python-blueprint.git
 email: claire.merker@meteoswiss.ch
 full_name: Claire Merker
 github_username: clairemerker
 module_name: icon_timeseries
+project_doc_url: https://github.io/clairemerker/icon-timeseries
 project_github: MeteoSwiss-APN/icon-timeseries
+project_keywords: ICON time series
 project_name: ICON time series
 project_short_description: ICON time series
 project_slug: icon-timeseries
+project_ssh_url: MeteoSwiss-APN/icon-timeseries.git
 python_version: '3.10'
 version: 0.1.0
 year: '2022'
-
