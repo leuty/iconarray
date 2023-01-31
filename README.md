@@ -51,8 +51,8 @@ Check available options with
 ```bash
 tools/setup_env.sh -h
 ```
-We distinguish development installations which are editable and have additional dependencies on formatters and linters from productive installations which are non-editable
-and have no additional dependencies. Moreover we distinguish pinned installations based on exported (reproducible) environments and free installations where the installation
+
+We distinguish pinned installations based on exported (reproducible) environments and free installations where the installation
 is based on top-level dependencies listed in `requirements/requirements.yml`. If you start developing, you might want to do an unpinned installation and export the environment:
 
 ```bash
@@ -64,7 +64,7 @@ tools/setup_env.sh -u -e -n <package_env_name>
 environment `conda install -c conda-forge mamba`. If you install mamba in another (maybe dedicated) environment, environments installed with mamba will be located
 in `<miniconda_root_dir>/envs/mamba/envs`, which is not very practical.
 
-The package itself is installed with `pip`:
+The package itself is installed with `pip`. For development, install in editable mode:
 
 ```bash
 conda activate <package_env_name>
@@ -108,11 +108,7 @@ Make sure to update your requirement files and export your environments after in
 
 ### Roadmap to your first contribution
 
-Generally, the source code of your library is located in `src/<library_name>`. The blueprint will generate some example code in `mutable_number.py`, `utils.py` and `cli.py`. `cli.py` thereby serves as an entry
-point for functionalities you want to execute from the command line, it is based on the Click library. If you do not need interactions with the command line, you should remove `cli.py`. Moreover, of course there exist other options for command line interfaces,
-a good overview may be found here (https://realpython.com/comparing-python-command-line-parsing-libraries-argparse-docopt-click/), we recommend however to use click. The provided example
-code should provide some guidance on how the individual source code files interact within the library. In addition to the example code in `src/<library_name>`, there are examples for
-unit tests in `tests/<library_name>/`, which can be triggered with `pytest` from the command line. Once you implemented a feature (and of course you also
+Tests can be triggered with `pytest` from the command line. Once you implemented a feature (and of course you also
 implemented a meaningful test ;-)), you are likely willing to commit it. First, go to the root directory of your package and run pytest.
 
 ```bash
@@ -121,8 +117,7 @@ cd <package-root-dir>
 pytest
 ```
 
-Note that neither pytest, nor pre-commit, nor any of the linters invoked by the pre-commit hooks will be available in the production environment, so make sure you have a development environment
-installed and activated. If you use the blueprint as is, pre-commit will not be triggered locally but only if you push to the main branch
+If you use the blueprint as is, pre-commit will not be triggered locally but only if you push to the main branch
 (or push to a PR to the main branch). If you consider it useful, you can set up pre-commit to run locally before every commit by initializing it once. In the root directory of
 your package, type:
 
