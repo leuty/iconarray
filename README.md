@@ -1,6 +1,9 @@
 # ICON time series
 Visualise time series of ICON data.
 
+<img src="images/example.png" width="100">
+
+
 This package provides functionalities to display time series from ICON output files. It handles GRIB input (necdf support is currently being developed) on the native. The package should actually also support COSMO data and data on a regular rotated pole grid, but this is features are less tested and might be buggy.
 
 ## Quick start
