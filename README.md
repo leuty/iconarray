@@ -15,6 +15,8 @@ This package provides functionalities to display time series from ICON output fi
     - `conda deactivate; conda activate icon-timeseries`
 6. Check the installation: `pytest`
 
+*Hint*: If you don't have mamba installed, please have a look [here](#setup).
+
 You are now ready to go! For more information read below.
 
 If the tests fail, contact the package administrator Claire Merker.
