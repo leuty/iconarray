@@ -126,7 +126,7 @@ def meanmax(
         dask_nworkers = None
 
     # gather data for all experiments
-    da_dict = {"mean": {}, "max": {}}  # type: Dict[str, Dict[str, xr.DataArray]]
+    da_dict: Dict[str, Dict[str, xr.DataArray]] = {"mean": {}, "max": {}}
     for one_exp in exp:
         filelist = glob.glob(one_exp[0])
         if len(filelist) == 0:
@@ -219,7 +219,7 @@ def nearest_neighbour(
         dask_nworkers = None
 
     # gather data for all experiments
-    da_dict = {"values": {}}  # type: Dict[str, Dict[str, xr.DataArray]]
+    da_dict: Dict[str, Dict[str, xr.DataArray]] = {"values": {}}
     for one_exp in exp:
         filelist = glob.glob(one_exp[0])
         if len(filelist) == 0:
