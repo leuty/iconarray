@@ -44,7 +44,7 @@ In order to use more than one dask worker for the parallelisation, the job needs
 
 ## Developing in icon-timeseries
 
-This section provides some more detailed information on the package and some guidance for the development process. Read it carefully, especially if you are new to Python and/or Python development in APN.
+This section provides some more detailed information on the package and some guidance for the development process. Read it carefully, especially if you are new to Python and/or Python development in APN. Also refer to `CONTRIBUTING.md` for more information.
 
 ### Setup
 
@@ -84,21 +84,45 @@ If the tests pass, you are good to go. If not, contact the package administrator
 
 ### ecCodes for GRIB decoding
 
-Since this package uses cfgrib to decode GRIB data, make sure to run `tools/setup_grib_env.sh` with your conda environment active to setup ecCodes correctly. You need to deactivate and reactivate the conda environment for that settings to be applied correctly. This step only needs to be done once, the settings are then stored in the conda enviroment! In case of an upgrade of the ecCodes versions and definitions supported by spack, this setup script might need to be updated. If you need a personalised version of ecCodes definitions that is not supported by spack, you can specify the path to your version in `GRIB_DEFINITION_PATH` (and `GRIB_SAMPLES_PATH` if needed) in `tools/setup_grib_env.sh`.
+Since this package uses cfgrib to decode GRIB data, make sure to run `tools/setup_grib_env.sh` with your conda environment active to setup ecCodes correctly. You need to deactivate and reactivate the conda environment for that settings to be applied correctly. This step only needs to be done once, the settings are then stored in the conda environment! In case of an upgrade of the ecCodes versions and definitions supported by spack, this setup script might need to be updated. If you need a personalised version of ecCodes definitions that is not supported by spack, you can specify the path to your version in `GRIB_DEFINITION_PATH` (and `GRIB_SAMPLES_PATH` if needed) in `tools/setup_grib_env.sh`.
 
 ### Code structure
 
 The structure of the package is currently simple:
-* `src/ion_timeseries`: source code, modules for features and utilities, and for the command-line tools (`cli.py`)
+* `src/ion_timeseries`: Source code of the package. Modules for features and utilities, and for the command-line tools (`cli.py`).
 * `src/resources`: the file `domains.yaml` stores the pre-defined domains and can be extended for user-defined domains
-* `tests/test_icon_timeseries`: unit and integration tests
-* `tools/*`: helper scripts for the setup and some linters/checkers
-* `requirements/*`: files specifying the dependencies of the package
-  * `requirements.yml`: unpinned dependencies
-  * `environment.yml`: saved pinned environments (reproducible), this should only be updated with a tested, stable environment!
-* `.github`: definition files for GitHub Actions workflows
-* `docs`: could be build automatically with sphinx to generate html or pdf documentation, currently not set up
-* `jenkins/`: templates for Jenkins plans, currently not used
+* `tests/test_icon_timeseries`: Unit and integration tests, run with `pytest`.
+- `tools/`: Helper scripts primarily for setup and development
+    - `run-mypy.sh`: Run script for the static type checker `mypy`.
+    - `setup_env.sh`: Script to create new conda environments; see `tools/setup_env.sh -h` for all available options.
+    - `setup_grib_env.sh`: Script that sets the ecCodes environment variables in the conda environment.
+    - `setup_miniconda.sh`: Script to install miniconda.
+* `requirements/`: Project dependencies and environment
+  * `requirements.yml`: Top-level runtime and development dependencies with minimal version restrictions (typically a minimum version or a version range); kept manually.
+  * `environment.yml`: Full tree of runtime and development dependencies with fully specified ('pinned') version numbers; created with `conda env export`.
+  This should only be updated with a tested, stable environment!
+* `docs`: Documentation. Could be build automatically with sphinx to generate html or pdf documentation, currently not set up.
+* `jenkins/`: Templates for Jenkins plans, currently not used.
+* `.github`: Definition files for GitHub Actions workflows
+* `.github/workflows/`: [GitHub Actions](https://docs.github.com/en/actions) workflows, e.g., checks that are run when certain branches are pushed
+* `.gitignore`: Files and folders ignored by `git`.
+* `.pre-commit-config.yaml`: Configuration of pre-commit hooks, which are formatters and checkers run before a successful commit.
+* `AUTHORS.md`: Project authors.
+* `CONTRIBUTING.md`: Instructions on how to contribute to the project.
+* `HISTORY.md`: List of changes for each version of the project.
+* `LICENSE`: License of the project.
+* `MANIFEST.in`: Files installed alongside the source code.
+* `pyproject.toml`: Main package specification file, including build dependencies, metadata and the configurations of development tools like `black`, `pytest`, `mypy` etc.
+* `README.md`: Description of the project.
+* `USAGE.md`: Information on how to use the package.
+
+### How to provide executable scripts
+
+By default, a single executable script called icon-timeseries is provided. It is created when the package is installed. When you call it, the main function (`cli`) in `src/icon_timeseries/cli.py` is called.
+
+When the package is installed, an executable script named `icon-timeseries` is created in the bin folder of the active conda environment. Upon calling this script in the shell, the `main` function in `src/icon_timeseries/cli.py` is executed.
+
+The scripts, their names and entry points are specified in `pyproject.toml` in the `[project.scripts]` section. Just add additional entries to provide more scripts to the users of your package.
 
 ### Testing and code standards
 
@@ -143,13 +167,41 @@ when you push your changes to the main branch. Note that pytest is currently not
 #### GitHub actions
 
 `.github/workflows/pre-commit.yml` contains a hook that will trigger the creation of your environment (unpinned) on the GitHub actions server and
-then run various formatters and linters through pre-commit (tests are currently ot included). This hook is only triggered upon pushes to the main branch (in general: don't do that) and in pull requests to the main branch (definitly do that).
+then run various formatters and linters through pre-commit (tests are currently not included). This hook is only triggered upon pushes to the main branch (in general: don't do that) and in pull requests to the main branch (definitely do that).
 
 #### Jenkins
 
 Two jenkins plans are available in the `jenkins/` folder. On the one hand `jenkins/Jenkinsfile` controls the nightly (weekly, monthly, ...) builds, on the other hand
 `jenkins/JenkinsJobPR` controls the pipeline invoked with the command `launch jenkins` in pull requests on GitHub. Your jenkins pipeline will not be set up
 automatically. If you need to run your tests on CSCS machines, contact DevOps to help you with the setup of the pipelines. Otherwise, you can ignore the jenkinsfiles and exclusively run your tests and checks on GitHub actions.
+
+### Versioning
+
+The version should be increased and a release created after major changes. This should be discussed with the package administrator. Information on versioning can be found in `CONTRIBUTING.md`.
+
+### Managing dependencies
+
+ICON time series uses [Conda](https://docs.conda.io/en/latest/) to manage dependencies. (Also check out [Mamba](https://mamba.readthedocs.io/en/latest/) if you like your package installations fast.) Dependencies are specified in YAML files, of which there are two:
+
+- `requirements/requirements.yml`: Top-level runtime and development dependencies with minimal version restrictions (typically a minimum version or a version range); kept manually.
+- `requirements/environment.yml`: Full tree of runtime and development dependencies with fully specified ('pinned') version numbers; created with `conda env export`.
+
+The pinned `environment.yml` file should be used to create reproducible environments for development or deployment. This ensures reproducible results across machines and users. The unpinned `requirements.yml` file has two main purposes: (i) keeping track of the top-level dependencies, and (ii) periodically updating the pinned `environment.yml` file to the latest package versions.
+
+After introducing new first-level dependencies to your requirements, you have to update the environment files in order to be able to create reproducible environments for deployment and production.
+Updating the environment files involves the following steps:
+
+1. Creating an environment from your top-level dependencies in `requirements/requirements.yml`
+2. Exporting this environment to `requirements/environment.yml`
+
+Alternatively, use the provided script
+
+```bash
+./tools/setup_env.sh -ue
+```
+
+to create a environment from unpinned (`-u`) runtime and development dependencies and export (`-e`) it (consider throwing in `-m` for good measure to speed things up with `mamba`).
+
 
 ## Credits
 
