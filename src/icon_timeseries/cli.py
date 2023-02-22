@@ -120,7 +120,7 @@ def meanmax(
         )
         logging.warning("send your job on a post-proc node to activate dask_nworkers")
         dask_nworkers = None
-    elif not "ln" in os.uname().nodename:
+    elif "ln" not in os.uname().nodename:
         logging.info("job is running on %s, dask_nworkers active", os.uname().nodename)
         logging.info("number of dask workers: %d", dask_nworkers)
         chunks = {"generalVerticalLayer": 1}
