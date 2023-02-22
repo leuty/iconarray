@@ -245,7 +245,7 @@ def plot_domain(
         fig, ax = plt.subplots()
 
     # create figure
-    fig, ax = plt.subplots(subplot_kw=dict(projection=PlateCarree()))
+    fig, ax = plt.subplots(subplot_kw={"projection": PlateCarree())
 
     # plot the data for the unmasked region
     try:

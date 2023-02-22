@@ -116,7 +116,7 @@ def meanmax(
     chunks = None
     if dask_nworkers and "ln" in os.uname().nodename:
         logging.warning(
-            "job is running on %s, dask_nworkers are deactived", os.uname().nodename
+            "job is running on %s, dask_nworkers are deactivated", os.uname().nodename
         )
         logging.warning("send your job on a post-proc node to activate dask_nworkers")
         dask_nworkers = None
