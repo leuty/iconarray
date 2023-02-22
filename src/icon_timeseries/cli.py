@@ -114,16 +114,16 @@ def meanmax(
     """Read data for a variable from GRIB file(s) and plot a domain average and max."""
     # check dask setup
     chunks = None
-    if "pp" in os.uname().nodename:
-        logging.info("job is running on %s, dask_nworkers active", os.uname().nodename)
-        logging.info("number of dask workers: %d", dask_nworkers)
-        chunks = {"generalVerticalLayer": 1}
-    elif dask_nworkers and "pp" not in os.uname().nodename:
+    if dask_nworkers and "ln" in os.uname().nodename:
         logging.warning(
-            "job is running on %s, dask_nworkers not active", os.uname().nodename
+            "job is running on %s, dask_nworkers are deactivated", os.uname().nodename
         )
         logging.warning("send your job on a post-proc node to activate dask_nworkers")
         dask_nworkers = None
+    elif "ln" not in os.uname().nodename:
+        logging.info("job is running on %s, dask_nworkers active", os.uname().nodename)
+        logging.info("number of dask workers: %d", dask_nworkers)
+        chunks = {"generalVerticalLayer": 1}
 
     # gather data for all experiments
     da_dict: Dict[str, Dict[str, xr.DataArray]] = {"mean": {}, "max": {}}
