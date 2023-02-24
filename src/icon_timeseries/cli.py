@@ -285,12 +285,27 @@ def nearest_neighbour(
     "(de-averaging and de-accumulation are currently implemented)",
 )
 @click.option(
-    "--logscale",
-    "logscale",
+    "--bins",
+    type=(float, float, int),
+    default=(0.1, 100., 50),
+    nargs=3,
+    help="bins for histogram, format: min (float) max (float) n_bins (int).",
+)
+@click.option(
+    "--xlog",
+    "xlog",
     default=False,
     is_flag=True,
     type=bool,
-    help="plot on logscale with logarithmic bins",
+    help="plot on x-logscale with logarithmic bins",
+)
+@click.option(
+    "--ylog",
+    "ylog",
+    default=False,
+    is_flag=True,
+    type=bool,
+    help="plot on y-logscale",
 )
 @click.option(
     "--dask-workers",
@@ -307,7 +322,9 @@ def histograms(
     gridfile: str | None,
     domain: str,
     deagg: bool,
-    logscale: bool,
+    bins: Tuple[float, float, int],
+    xlog: bool,
+    ylog: bool,
     dask_nworkers: int | None,
 ):  # pylint: disable=too-many-arguments
     """Read data for a variable from GRIB file(s) and plot a domain average and max."""
@@ -348,10 +365,11 @@ def histograms(
     _, _ = plot_histograms(
         da_dict,
         domain,
-        min_bin=0.1,
-        max_bin=10.0,
-        nbins=50,
-        logbins=logscale,
+        min_bin=bins[0],
+        max_bin=bins[1],
+        nbins=bins[2],
+        xlog=xlog,
+        ylog=ylog,
     )
 
 

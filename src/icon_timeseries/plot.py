@@ -292,19 +292,17 @@ def plot_histograms(
     min_bin: float = 0.1,
     max_bin: float = 100.0,
     nbins: int = 50,
-    logbins: bool = False,
+    xlog: bool = False,
+    ylog: bool = False,
 ) -> tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
     """Draw a histogram plot for a dataset over a given domain."""
     logging.info("Histogram plotting started...")
-    fig, axs = plt.subplots(len(da_dict), sharex=True)
-    # if only one subplot, axs is not subscriptable, hence the hack.
-    if not isinstance(axs, np.ndarray):
-        axs = np.array([axs])
+    fig, ax = plt.subplots(1)
 
     # prepare bins
     # https://stackoverflow.com/questions/6855710/
     # how-to-have-logarithmic-bins-in-a-python-histogram
-    if logbins:
+    if xlog:
         bins = 10.0 ** np.linspace(np.log10(min_bin), np.log10(max_bin), nbins)
     else:
         bins = np.linspace(min_bin, max_bin, nbins)
@@ -322,23 +320,31 @@ def plot_histograms(
         color = cmap(i)
         vals = e_val.values.flatten()
         counts, bin_edges = np.histogram(vals, bins)
-        axs[i].bar(bin_edges[:-1], counts, align="edge", color=color)
-        axs[i].set_title(f"EXP {e_key}")
-        axs[i].set_xlabel(f"{e_val.name} ({e_val.GRIB_units})")
-        axs[i].set_ylabel("Frequency count (-)")
-        axs[i].grid(True, which="both", axis="both", linestyle="--")
-        if logbins:
-            axs[i].set_xscale("log")
-
-    ylims = np.array([ax.get_ylim() for ax in axs])
-    ylim_max = ylims[:, 1].max()
-    for ax in axs:
-        ax.set_ylim(0, ylim_max)
+        width = np.diff(bin_edges)
+        ax.bar(
+            bin_edges[:-1],
+            counts,
+            width=width,
+            align="edge",
+            fill=False,
+            edgecolor=color,
+            alpha=0.8,
+            label=e_key
+        )
+    ax.set_title(f"Experiments {', '.join(list(da_dict.keys()))}") # remove brackets
+    ax.set_xlabel(f"{e_val.name} {e_val.GRIB_stepType} ({e_val.GRIB_units})")
+    ax.set_ylabel("Frequency count (-)")
+    ax.grid(True, which="both", axis="both", linestyle="--")
+    ax.legend()
+    if xlog:
+        ax.set_xscale("log")
+    if ylog:
+        ax.set_yscale("log")
 
     fig.suptitle(f"Histogram plots for domain {domain}")
     fname = f"histograms_{e_val.name}_{'-'.join(da_dict.keys())}.png"
-    fig.set_size_inches(8.0, 15.0)
+    fig.set_size_inches(4.0, 8.0)
     fig.savefig(fname, dpi=300)
     logging.info("saved figure %s", fname)
 
-    return fig, axs
+    return fig, ax
