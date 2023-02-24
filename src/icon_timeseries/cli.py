@@ -287,7 +287,7 @@ def nearest_neighbour(
 @click.option(
     "--bins",
     type=(float, float, int),
-    default=(0.1, 100., 50),
+    default=(0.1, 100.0, 50),
     nargs=3,
     help="bins for histogram, format: min (float) max (float) n_bins (int).",
 )
@@ -326,7 +326,7 @@ def histograms(
     xlog: bool,
     ylog: bool,
     dask_nworkers: int | None,
-):  # pylint: disable=too-many-arguments
+):  # pylint: disable=too-many-arguments, too-many-locals
     """Read data for a variable from GRIB file(s) and plot a domain average and max."""
     # check dask setup
     chunks = None
