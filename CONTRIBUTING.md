@@ -2,6 +2,8 @@
 
 Contributions are welcome, and they are greatly appreciated! Every little bit helps, and credit will always be given.
 
+Please also refer to the detailed `README.md`!
+
 ## Types of Contributions
 
 You can contribute in many ways.
@@ -26,7 +28,7 @@ Look through the  [GitHub issues](https://github.com/MeteoSwiss-APN/icon-timeser
 
 ### Write Documentation
 
-ICON time series could always use more documentation, whether as part of the official ICON time series docs, in docstrings --- or even on the web in blog posts, articles, and such.
+ICON time series could always use more documentation, whether as part of the official ICON time series docs or in docstrings.
 
 ### Submit Feedback
 
@@ -40,7 +42,7 @@ If you are proposing a feature,
 
 ## Get Started!
 
-Ready to contribute? Here's how to set up `icon-timeseries` for local development.
+Ready to contribute? Here's how to set up `icon-timeseries` for local development (see `README.md` for more detailed information).
 
 1. Fork the [`icon-timeseries` repo](https://github.com/ on GitHub.
 2. Clone your fork locally:
@@ -49,25 +51,36 @@ Ready to contribute? Here's how to set up `icon-timeseries` for local developmen
     git clone git@github.com:your_name_here/icon-timeseries.git
     ```
 
-3. Create a virtual environment and install the development dependencies:
+3. Create a virtual environment and install the dependencies:
 
     ```bash
     cd icon-timeseries/
-    ./setup_env.sh -di
+    ./tools/setup_env.sh
     ```
 
-    This will create a conda environment named `icon-timeseries-dev` (change with `-n`) and install the following:
+    This will create a conda environment named `icon-timeseries` (change with `-n`) and install the pinned runtime and development dependencies in `requirements/environment.yml`.
 
-    - Pinned runtime dependencies in `requirements/environment.yml`
-    - Pinned Development dependencies in `requirements/dev-environment.yml`
-    - The `icon-timeseries` package itself in editable mode.
+    Setup the EcCodes environment:
+
+    ```bash
+    conda activate icon-timeseries
+    tools/setup_grib_env.sh
+    conda deactivate; conda activate icon-timeseries
+    ```
+
+    Install the package itself in editable mode:
+
+    ```bash
+    pip install --editable .
+    ```
 
     Activate the environment:
 
     ```bash
-    conda activate icon-timeseries-dev
+    conda activate icon-timeseries
     ```
-    Use `-u` to get the newest package versions (unpinned dependencies in `requirements/requirements.yml` and `requirements/dev-requirements.yml`), and additionally `-e` to update the environment files.
+
+    Use `-u` to get the newest package versions (unpinned dependencies in `requirements/requirements.yml`), and additionally `-e` to update the environment files.
 
 4. Create a branch for local development:
 
@@ -105,11 +118,10 @@ Before you submit a pull request, check that it meets these guidelines:
 
 1. The pull request should include tests.
 2. If the pull request adds functionality, the docs should be updated. Put your new functionality into a function with a docstring, and add the feature to the list in `README.md`.
-3. The pull request should work for Python 3.6 and 3.7, and for PyPy. Make sure that the tests pass for all supported Python versions.
 
 ## Tips
 
-For a subset of tests or a specific test, run:
+For a subset of tests or a specific test, run e.g.:
 
 ```bash
 pytest tests.test_icon_timeseries
@@ -123,67 +135,3 @@ In order to release a new version of your project, follow these steps:
 - Make sure everything is committed, cleaned up and validating (duh!). Don't forget to keep track of the changes in `HISTORY.md`.
 - Increase the version number that is hardcoded in `pyproject.toml` (and only there) and commit.
 - Either create a (preferentially annotated) tag with `git tag`, or directly create a release on GitHub.
-
-## Project Structure
-
-Following is a description of the most important files and folders in the project in alphabetic order.
-
-- `.github/workflows/`: [GitHub Actions](https://docs.github.com/en/actions) workflows, e.g., checks that are run when certain branches are pushed.
-- `docs/`: Documentation.
-- `jenkins/`: Jenkins setup.
-- `requirements/`: Various kinds of dependencies with different degrees of version restrictions.
-    - `dev-environment.yml`: Complete tree of runtime and development dependencies with fully pinned version numbers; created with `conda env export`; (approximately) a superset of those in `environment.yml`.
-    - `dev-requirements.yml`: Top-level development dependencies with only necessary version restrictions (typically a minimum version or a version range); kept manually.
-    - `environment.yml`: Complete tree of runtime dependencies with fully pinned version numbers; created with `conda env export`; (approximately) a subset of those `dev-environment.yml`.
-    - `requirements.yml`: Top-level runtime dependencies with only necessary version restrictions (typically a minimum version or a version range); kept manually.
-- `src/icon_timeseries/`: Source code of the project package.
-- `tests/test_icon_timeseries/`: Unit tests of the project package; run with `pytest`.
-- `.gitignore`: Files and folders ignored by `git`.
-- `.pre-commit-config.yaml`: Configuration of pre-commit hooks, which are formatters and checkers run before a successful commit.
-- `AUTHORS.md`: Project authors.
-- `CONTRIBUTING.md`: Instructions on how to contribute to the project.
-- `HISTORY.md`: List of changes for each version of the project.
-- `LICENSE`: License of the project.
-- `MANIFEST.in`: Files installed alongside the source code.
-- `pyproject.toml`: Main package specification file, including build dependencies, metadata and the configurations of development tools like `black`, `pytest`, `mypy` etc.
-- `README.md`: Description of the project.
-- `run-mypy.sh`: Run script for the static type checker `mypy`.
-- `setup_env.sh`: Script to create new conda environments; see `setup_env.sh -h` for all available options.
-- `setup_miniconda.sh`: Script to install miniconda.
-- `test_all.sh`: Script to run all tests and checkers, including the pre-commit hooks and unit tests.
-- `USAGE.md`: Information on how to use the package.
-
-## Managing dependencies
-
-ICON time series uses [Conda](https://docs.conda.io/en/latest/) to manage dependencies. (Also check out [Mamba](https://mamba.readthedocs.io/en/latest/) if you like your package installations fast.) Dependencies are specified in YAML files, of which there are four:
-
-- `requirements/requirements.yml`: Top-level runtime dependencies with minimal version restrictions (typically a minimum version or a version range). It is kept manually.
-- `requirements/dev-requirements.yml`: Additional top-level development dependencies (formatters, linters, testing, etc.) with minimal version restrictions; also kept manually.
-- `requirements/environment.yml`: Full tree of runtime dependencies with fully specified ('pinned') version numbers. It is created with `conda env export`.
-- `requirements/dev-environment.yml`: Full tree of runtime and development dependencies with fully specified version numbers; also created with `conda env export`. The dependencies are an (approximate) superset of those in `environment.yml`.
-
-The pinned `*environment.yml` files should be used to create reproducible environments for development or deployment. This ensures reproducible results across machines and users. The unpinned `*requirements.yml` files have two main purposes: (i) keeping track of the top-level dependencies, and (ii) periodically updating the pinned `*environment.yml` files to the latest package versions.
-
-After introducing new first-level dependencies to your requirements, you have to update the environment files in order to be able to create reproducible environments for deployment and production.
-Updating the environment files involves the following steps:
-
-1. Creating an environment from your first-level dependencies in `requirements/requirements.yml`
-2. Exporting this environment to `requirements/environment.yml`
-3. Creating a development environment from both `requirements/requirements.yml` and `requirements/dev-requirements.yml`.
-4. Exporting the develompment environment to `requirements/dev-environment.yml`
-
-Alternatively, use the provided script
-
-```bash
-./setup_env.sh -ude
-```
-
-to create a runtime and a development (`-d`) environment from unpinned (`-u`) dependencies and export (`-e`) them (consider throwing in `-m` for good measure to speed things up with `mamba`).
-
-## How to provide executable scripts
-
-By default, a single executable script called icon-timeseries is provided. It is created when the package is installed. When you call it, the main function (`cli`) in `src/icon_timeseries/cli.py` is called.
-
-When the package is installed, a executable script named `icon-timeseries` is created in the bin folder of the active conda environment. Upon calling this script in the shell, the `main` function in `src/icon_timeseries/cli.py` is executed.
-
-The scripts, their names and entry points are specified in `pyproject.toml` in the `[project.scripts]` section. Just add additional entries to provide more scripts to the users of your package.
