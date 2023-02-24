@@ -329,9 +329,9 @@ def plot_histograms(
             fill=False,
             edgecolor=color,
             alpha=0.8,
-            label=e_key
+            label=e_key,
         )
-    ax.set_title(f"Experiments {', '.join(list(da_dict.keys()))}") # remove brackets
+    ax.set_title(f"Experiments {', '.join(list(da_dict.keys()))}")  # remove brackets
     ax.set_xlabel(f"{e_val.name} {e_val.GRIB_stepType} ({e_val.GRIB_units})")
     ax.set_ylabel("Frequency count (-)")
     ax.grid(True, which="both", axis="both", linestyle="--")
