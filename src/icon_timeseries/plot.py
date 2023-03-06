@@ -102,7 +102,9 @@ def plot_ts_multiple(
 
     if save:
         try:
-            fname = f"timeseries_{e_val.name}_{'-'.join(da_dict.keys())}_l{e_val.level}.png"
+            fname = (
+                f"timeseries_{e_val.name}_{'-'.join(da_dict.keys())}_l{e_val.level}.png"
+            )
         except AttributeError:
             fname = f"timeseries_{e_val.name}_{'-'.join(da_dict.keys())}.png"
         plt.savefig(fname, bbox_inches="tight", dpi=300)

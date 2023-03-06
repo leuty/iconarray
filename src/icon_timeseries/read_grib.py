@@ -109,9 +109,7 @@ def var_from_files(
         sys.exit()
     if level:
         try:
-            da = da.sel(
-                {da.GRIB_typeOfLevel: level}, method="nearest", tolerance=1e-09
-            )
+            da = da.sel({da.GRIB_typeOfLevel: level}, method="nearest", tolerance=1e-09)
             da.attrs["level"] = level
         except KeyError as e:
             logging.error(
