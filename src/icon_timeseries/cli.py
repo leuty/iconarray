@@ -327,7 +327,7 @@ def histograms(
     ylog: bool,
     dask_nworkers: int | None,
 ):  # pylint: disable=too-many-arguments, too-many-locals
-    """Read data for a variable from GRIB file(s) and plot a domain average and max."""
+    """Read data for a variable from GRIB file(s) and plot the values distribution."""
     # check dask setup
     chunks = None
     if "pp" in os.uname().nodename:
