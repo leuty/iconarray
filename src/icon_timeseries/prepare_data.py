@@ -24,7 +24,7 @@ from .utils import parse_coords
 def prepare_meanmax(
     filelist: List[str],
     varname: str,
-    level: int | None = None,
+    level: float | None = None,
     gridfile: str | None = None,
     domain: str = "all",
     deagg: bool = False,
@@ -39,8 +39,8 @@ def prepare_meanmax(
         list of files to read
     varname : str
         GRIB shortName of variable to extract
-    level : int
-        model level index
+    level : float
+        model level value
     gridfile : str, optional
         ICON grid file, needed for unstructured grid
     domain : str
@@ -88,7 +88,7 @@ def prepare_nn(
     filelist: List[str],
     varname: str,
     lonlat: str,
-    level: int | None = None,
+    level: float | None = None,
     gridfile: str | None = None,
     deagg: bool = False,
     chunks: Dict[str, int] | None = None,
@@ -104,8 +104,8 @@ def prepare_nn(
         GRIB shortName of variable to extract
     lonlat : str
         Coordinates to consider for nn lookup. Format ('lon,lat').
-    level : int
-        model level index
+    level : float
+        model level value
     gridfile : str, optional
         ICON grid file, needed for unstructured grid
     deagg : bool

@@ -126,7 +126,7 @@ def check_grid(
     filelist: List[str],
     grid: IconGrid | None,
     varname: str,
-    level: int | None = None,
+    level: float | None = None,
     chunks: Dict[str, int] | None = None,
     dask_nworkers: int | None = None,
 ) -> None:

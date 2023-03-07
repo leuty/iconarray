@@ -70,7 +70,7 @@ def main(ctx, **kwargs) -> None:
 @click.option(
     "--varname", required=True, type=str, help="GRIB shortName of the variable"
 )
-@click.option("--level", default=None, type=int, help="model level index")
+@click.option("--level", default=None, type=float, help="model level value")
 @click.option(
     "--color",
     default=None,
@@ -106,7 +106,7 @@ def main(ctx, **kwargs) -> None:
 def meanmax(
     exp: Tuple[Tuple, ...],
     varname: str,
-    level: int | None,
+    level: float | None,
     color: str | None,
     gridfile: str | None,
     domain: str,
