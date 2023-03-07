@@ -167,7 +167,7 @@ def prepare_nn(
 def prepare_masked_da(
     filelist: List[str],
     varname: str,
-    level: int | None = None,
+    level: float | None = None,
     gridfile: str | None = None,
     domain: str = "all",
     deagg: bool = False,
@@ -183,7 +183,7 @@ def prepare_masked_da(
     varname : str
         GRIB shortName of variable to extract
     level : int
-        model level index
+        model level value
     gridfile : str, optional
         ICON grid file, needed for unstructured grid
     domain : str

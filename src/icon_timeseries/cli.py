@@ -177,7 +177,7 @@ def meanmax(
     type=str,
     help="Coordinates (format 'lon,lat') for nearest neighbour lookup.",
 )
-@click.option("--level", default=None, type=int, help="model level index")
+@click.option("--level", default=None, type=float, help="model level values")
 @click.option(
     "--gridfile",
     default=None,
@@ -200,7 +200,7 @@ def meanmax(
 def nearest_neighbour(
     exp: Tuple[Tuple, ...],
     varname: str,
-    level: int | None,
+    level: float | None,
     gridfile: str | None,
     lonlat: str,
     deagg: bool,
@@ -258,7 +258,7 @@ def nearest_neighbour(
 @click.option(
     "--varname", required=True, type=str, help="GRIB shortName of the variable"
 )
-@click.option("--level", default=None, type=int, help="model level index")
+@click.option("--level", default=None, type=float, help="model level value")
 @click.option(
     "--color",
     default=None,
@@ -317,7 +317,7 @@ def nearest_neighbour(
 def histograms(
     exp: Tuple[Tuple, ...],
     varname: str,
-    level: int | None,
+    level: float | None,
     color: str | None,
     gridfile: str | None,
     domain: str,
