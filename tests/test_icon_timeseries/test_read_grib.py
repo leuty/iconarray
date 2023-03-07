@@ -1,11 +1,14 @@
 """Tests for GRIB reading."""
 # Standard library
 import glob
+import os
 
 # First-party
 from icon_timeseries.read_grib import var_from_files
 
-filepattern = "/store/s83/osm/ICON-CH1-EPS/FCST_RING/22111600/lfff000*0"
+test_dir = "/store/s83/cmerker/test_data/icon_timeseries/data/test_plots"
+
+filepattern = os.path.join(test_dir, "lfff000*0")
 
 
 def test_read():
