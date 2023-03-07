@@ -51,7 +51,7 @@ def plot_ts_multiple(
 
     # loop over parameters
     for i, (p_key, p_val) in enumerate(da_dict.items()):
-        e_val = xr.DataArray()
+        e_val: xr.DataArray = xr.DataArray()  # pylint needs to have the loop variable
         exp_count = 0
         if colors is None:
             # Take the color sequence from a colormap
@@ -305,8 +305,8 @@ def plot_histograms(
 
     Parameters
     ----------
-    da_dict : Dict[str, Dict[str, xarray.DataArray]]
-        dictionary holding the data {"param": {"expid": xarray.DataArray}}. the
+    da_dict : Dict[str, xarray.DataArray]
+        dictionary holding the data {"expid": xarray.DataArray}. the
         dimension of the xarray.DataArray has to be 'time'
     domain : str, optional
         name of the domain for the plot title
