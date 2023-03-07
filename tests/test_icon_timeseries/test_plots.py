@@ -1,6 +1,7 @@
 """Tests for plots."""
 # Standard library
 import glob
+import os
 
 # Third-party
 import matplotlib.pyplot as plt  # type: ignore
@@ -10,8 +11,10 @@ import numpy as np
 from icon_timeseries.plot import plot_ts
 from icon_timeseries.prepare_data import prepare_meanmax
 
-gridfile = "/store/s83/tsm/ICON_INPUT/icon-1e_dev/ICON-1E_DOM01.nc"
-exp = "/store/s83/osm/ICON-CH1-EPS/FCST_RING/22111600/lfff000[0-3]0000"
+test_dir = "/store/s83/cmerker/test_data/icon_timeseries/data/test_plots"
+
+gridfile = os.path.join(test_dir, "ICON-1E_DOM01.nc")
+exp = os.path.join(test_dir, "lfff000[0-3]0000")
 
 
 # def test_plot_domain():

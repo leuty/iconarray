@@ -1,14 +1,16 @@
 """Tests for ICON grid reading."""
+# Standard library
+import os
+
 # First-party
 from icon_timeseries.handle_grid import get_grid
 from icon_timeseries.read_grib import var_from_files
 
-gridfile = "/store/s83/tsm/ICON_INPUT/icon-1e_dev/ICON-1E_DOM01.nc"
-wrong_gridfile = (
-    "/store/s83/osm/ICON-GRIDS/icon_grid_0001_R19B08_mch/"
-    "icon_grid_0001_R19B08_mch_DOM01.nc"
-)
-gribfile = "/store/s83/osm/ICON-CH1-EPS/FCST_RING/22111600/lfff00000000"
+test_dir = "/store/s83/cmerker/test_data/icon_timeseries/data/test_grid"
+
+gridfile = os.path.join(test_dir, "ICON-1E_DOM01.nc")
+wrong_gridfile = os.path.join(test_dir, "icon_grid_0001_R19B08_mch_DOM01.nc")
+gribfile = os.path.join(test_dir, "lfff00000000")
 
 
 def test_get_grid():
