@@ -39,11 +39,13 @@ The main functionalities of this package are:
 * plotting
   * time series visualisation for multiple runs
   * time series visualisation for ensemble data
+  * histograms for value distributions
 
 The functions of the package can be used in scripts or via pre-defined command-line tools. Following command-line tools are provided:
-* `icon-timeseries meanmax`: time series of domain average and domain maximum of a model variable on a given level (domains can be customised and added in `src/resources/domains.yaml`)
+* `icon-timeseries meanmax`: time series of domain average and domain maximum of a model variable on a given level (can display multiple experiments, domains can be customised and added in `src/resources/domains.yaml`)
 * `icon-timeseries quicklook-domain`: map plot of the considered domain
-* `icon-timeseries nearest-neighbour`: time series of the values of a model variable at the grid point closest to the given location
+* `icon-timeseries nearest-neighbour`: time series of the values of a model variable at the grid point closest to the given location (can display multiple experiments)
+* `icon-timeseries histograms`: histograms of the values of a model variable (can display multiple experiments)
 
 In order to use more than one dask worker for the parallelisation, the job needs to be send to the slurm queue (`postproc`). A script for `sbatch` containing an example call for `icon-timeseries meanmax` is provided: `sbatch.sh`
 
