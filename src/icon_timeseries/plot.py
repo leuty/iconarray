@@ -299,7 +299,7 @@ def plot_histograms(
     nbins: int = 50,
     xlog: bool = False,
     ylog: bool = False,
-    save : bool = True,
+    save: bool = True,
 ) -> tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
     """Draw a histogram plot for a dataset over a given domain.
 
@@ -388,7 +388,7 @@ def plot_histograms(
             )
         except AttributeError:
             fname = f"histograms_{e_val.name}_{'-'.join(da_dict.keys())}.png"
-        #fig.set_size_inches(4.0, 8.0)
+        # fig.set_size_inches(4.0, 8.0)
         fig.savefig(fname, dpi=300)
         logging.info("saved figure %s", fname)
 
