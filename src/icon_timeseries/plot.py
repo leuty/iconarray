@@ -299,8 +299,38 @@ def plot_histograms(
     nbins: int = 50,
     xlog: bool = False,
     ylog: bool = False,
+    save : bool = True,
 ) -> tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
-    """Draw a histogram plot for a dataset over a given domain."""
+    """Draw a histogram plot for a dataset over a given domain.
+
+    Parameters
+    ----------
+    da_dict : Dict[str, Dict[str, xarray.DataArray]]
+        dictionary holding the data {"param": {"expid": xarray.DataArray}}. the
+        dimension of the xarray.DataArray has to be 'time'
+    domain : str, optional
+        name of the domain for the plot title
+    min_bin : float, optional
+        lowest bin bound
+    max_bin : float, optional
+        highest bin bound
+    nbins : int, optional
+        number of bins
+    xlog : bool, optional
+        log. x-axis
+    ylog : bool, optional
+        log. y-axis
+    save : bool, optional
+        save the figure
+
+    Returns
+    -------
+    fig : matplotlib.figure.Figure
+        figure object
+    ax : matplotlib.axes.Axes
+        axes object
+
+    """
     logging.info("Histogram plotting started...")
     fig, ax = plt.subplots(1)
 
@@ -347,9 +377,11 @@ def plot_histograms(
         ax.set_yscale("log")
 
     fig.suptitle(f"Histogram plots for domain {domain}")
-    fname = f"histograms_{e_val.name}_{'-'.join(da_dict.keys())}.png"
-    fig.set_size_inches(4.0, 8.0)
-    fig.savefig(fname, dpi=300)
-    logging.info("saved figure %s", fname)
+
+    if save:
+        fname = f"histograms_{e_val.name}_{'-'.join(da_dict.keys())}.png"
+        fig.set_size_inches(4.0, 8.0)
+        fig.savefig(fname, dpi=300)
+        logging.info("saved figure %s", fname)
 
     return fig, ax
