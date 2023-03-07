@@ -24,7 +24,7 @@ xr.set_options(keep_attrs=True)
 def var_from_files(
     filelist: List[str],
     varname: str,
-    level: int | None = None,
+    level: float | None = None,
     parallel: bool = False,
     chunks: Dict[str, int] | None = None,
     dask_nworkers: int | None = None,
@@ -37,8 +37,8 @@ def var_from_files(
         list of files to read
     varname : str
         GRIB shortName of variable to extract
-    level : int, optional
-        model level index, no selection if None
+    level : float, optional
+        model level value, no selection if None
     parallel : bool, optional
         parallelise the reading with dask.
     chunks : Dict(str, int), optional
@@ -109,11 +109,15 @@ def var_from_files(
         sys.exit()
     if level:
         try:
-            da = da.loc[{da.GRIB_typeOfLevel: level}]
+            da = da.sel({da.GRIB_typeOfLevel: level}, method="nearest", tolerance=1e-09)
             da.attrs["level"] = level
-        except KeyError:
-            logging.error("level not found in data")
-            sys.exit()
+        except KeyError as e:
+            logging.error(
+                "level %s not found in data, available levels: %s",
+                level,
+                ", ".join([f"{x:.2f}" for x in da[da.GRIB_typeOfLevel].values]),
+            )
+            raise KeyError(e) from e
 
     try:
         if da.number.shape[0] > 1:

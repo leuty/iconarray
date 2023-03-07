@@ -101,7 +101,12 @@ def plot_ts_multiple(
             ax.xaxis.set_ticklabels([])
 
     if save:
-        fname = f"timeseries_{e_val.name}_{'-'.join(da_dict.keys())}.png"
+        try:
+            fname = (
+                f"timeseries_{e_val.name}_{'-'.join(da_dict.keys())}_l{e_val.level}.png"
+            )
+        except AttributeError:
+            fname = f"timeseries_{e_val.name}_{'-'.join(da_dict.keys())}.png"
         plt.savefig(fname, bbox_inches="tight", dpi=300)
         logging.info("saved figure %s", fname)
 
