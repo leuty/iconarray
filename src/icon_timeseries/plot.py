@@ -376,11 +376,19 @@ def plot_histograms(
     if ylog:
         ax.set_yscale("log")
 
-    fig.suptitle(f"Histogram plots for domain {domain}")
+    try:
+        fig.suptitle(f"Histogram plots for domain {domain}, level {e_val.level}")
+    except AttributeError:
+        fig.suptitle(f"Histogram plots for domain {domain}")
 
     if save:
-        fname = f"histograms_{e_val.name}_{'-'.join(da_dict.keys())}.png"
-        fig.set_size_inches(4.0, 8.0)
+        try:
+            fname = (
+                f"histograms_{e_val.name}_{'-'.join(da_dict.keys())}_l{e_val.level}.png"
+            )
+        except AttributeError:
+            fname = f"histograms_{e_val.name}_{'-'.join(da_dict.keys())}.png"
+        #fig.set_size_inches(4.0, 8.0)
         fig.savefig(fname, dpi=300)
         logging.info("saved figure %s", fname)
 
