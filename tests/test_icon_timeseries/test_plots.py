@@ -14,10 +14,13 @@ from icon_timeseries.plot import plot_ts_multiple
 from icon_timeseries.prepare_data import prepare_masked_da
 from icon_timeseries.prepare_data import prepare_meanmax
 
-test_dir = "/store/s83/cmerker/test_data/icon_timeseries/data/test_plots"
+test_single = "/store/s83/cmerker/test_data/icon_timeseries/data/test_plots"
+gridfile = os.path.join(test_single, "ICON-1E_DOM01.nc")
+exp_s = os.path.join(test_single, "lfff000[0-3]0000")
 
-gridfile = os.path.join(test_dir, "ICON-1E_DOM01.nc")
-exp = os.path.join(test_dir, "lfff000[0-3]0000")
+test_exps = "/store/s83/cmerker/test_data/icon_timeseries/data/test_ens"
+exp_1 = os.path.join(test_exps, "ICON-CH1-EPS", "004", "lfff000[0-4]0000")
+exp_2 = os.path.join(test_exps, "ICON-CH2-EPS", "004", "lfff000[0-4]0000")
 
 # saved values, reference results
 test_mean = np.array([279.10767, 279.22028, 279.024, 278.87067])
@@ -75,6 +78,112 @@ test_bar = np.array(
         0,
     ]
 )
+test_bar_1 = np.array(
+    [
+        5109178,
+        13554,
+        4263,
+        2121,
+        993,
+        483,
+        292,
+        189,
+        121,
+        94,
+        75,
+        41,
+        17,
+        5,
+        4,
+        4,
+        1,
+        2,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+    ]
+)
+test_bar_2 = np.array(
+    [
+        1278832,
+        4676,
+        1385,
+        726,
+        382,
+        228,
+        129,
+        77,
+        76,
+        47,
+        27,
+        36,
+        21,
+        8,
+        11,
+        4,
+        5,
+        5,
+        3,
+        3,
+        1,
+        1,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+    ]
+)
 
 # def test_plot_domain():
 #     """Test the quicklook for a masked domain."""
@@ -91,7 +200,7 @@ test_bar = np.array(
 def test_ts_plot():
     """Test plotting one time series."""
     domain = "ch"
-    filelist = glob.glob(exp)
+    filelist = glob.glob(exp_s)
     da_mean, _ = prepare_meanmax(
         filelist,
         "T",
@@ -111,7 +220,7 @@ def test_ts_plot():
 def test_ts_results():
     """Test plotting one time series."""
     domain = "ch"
-    filelist = glob.glob(exp)
+    filelist = glob.glob(exp_s)
     da_mean, _ = prepare_meanmax(
         filelist,
         "T",
@@ -131,9 +240,9 @@ def test_ts_results():
 
 
 def test_ts_multi():
-    """ "Test plotting time series of min and max."""
+    """Test plotting time series of min and max."""
     domain = "ch"
-    filelist = glob.glob(exp)
+    filelist = glob.glob(exp_s)
     da_mean, da_max = prepare_meanmax(
         filelist,
         "T",
@@ -174,9 +283,9 @@ def test_ts_multi():
 
 
 def test_hist():
-    """ "Test plotting one histogram."""
+    """Test plotting one histogram."""
     domain = "ch"
-    filelist = glob.glob(exp)
+    filelist = glob.glob(exp_s)
     min_bin = 250
     max_bin = 290
     nbins = 50
@@ -202,4 +311,35 @@ def test_hist():
         rtol=0,
         atol=0,
         err_msg="computes bar values do not match saved values",
+    )
+
+
+def test_hist_multiexps():
+    """Test plotting two histograms, and deaggregate."""
+    min_bin = 0
+    max_bin = 50
+    nbins = 50
+    da_dict = {}
+    for e, n in zip([exp_1, exp_2], ["ICON1", "ICON2"]):
+        filelist = glob.glob(e)
+        da = prepare_masked_da(
+            filelist,
+            "TOT_PREC",
+            deagg=True,
+        )
+        da_dict[n] = da
+    plot_histograms(da_dict, min_bin=min_bin, max_bin=max_bin, nbins=nbins, save=False)
+    np.testing.assert_allclose(
+        plt.gca().containers[0].datavalues,
+        test_bar_1,
+        rtol=0,
+        atol=0,
+        err_msg="computes bar values do not match saved values for exp1",
+    )
+    np.testing.assert_allclose(
+        plt.gca().containers[1].datavalues,
+        test_bar_2,
+        rtol=0,
+        atol=0,
+        err_msg="computes bar values do not match saved values for exp2",
     )
