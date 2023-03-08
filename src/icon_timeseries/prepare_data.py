@@ -61,40 +61,16 @@ def prepare_meanmax(
         domain maximum
 
     """
-    # get domain
-    if gridfile:
-        gd = get_grid(gridfile)
-    # check compatibility of grid, domain and data
-    if domain != "all" and gridfile:
-        check_grid(
-            filelist, gd, varname, level, chunks=chunks, dask_nworkers=dask_nworkers
-        )
-
-    # read the data
-    tstart = time.perf_counter()
-    da = var_from_files(
+    da = prepare_masked_da(
         filelist,
         varname,
         level,
-        parallel=True,
-        chunks=chunks,
-        dask_nworkers=dask_nworkers,
+        gridfile,
+        domain,
+        deagg,
+        chunks,
+        dask_nworkers,
     )
-    tend = time.perf_counter()
-    telapsed = tend - tstart
-    logging.info("reading time elapsed: %f", telapsed)
-
-    # data deaggregation
-    if not deagg:
-        pass
-    else:
-        da = deaggregate(da)
-
-    # apply domain mask if domain is set
-    if domain != "all" and "gd" in locals():
-        da = mask_domain(da, domain, gd)
-    elif domain != "all" and "gd" not in locals():
-        da = mask_domain(da, domain)
 
     # compute average and maximum
     if da.attrs["GRIB_gridType"] == "rotated_ll":
@@ -185,3 +161,82 @@ def prepare_nn(
 
 
 # pylint: enable=too-many-arguments,too-many-locals
+
+
+# pylint: disable=too-many-arguments
+def prepare_masked_da(
+    filelist: List[str],
+    varname: str,
+    level: float | None = None,
+    gridfile: str | None = None,
+    domain: str = "all",
+    deagg: bool = False,
+    chunks: Dict[str, int] | None = None,
+    dask_nworkers: int | None = None,
+) -> xr.DataArray:
+    """Get a masked DataArray of a model quantity.
+
+    Parameters
+    ----------
+    filelist : list(str)
+        list of files to read
+    varname : str
+        GRIB shortName of variable to extract
+    level : int
+        model level value
+    gridfile : str, optional
+        ICON grid file, needed for unstructured grid
+    domain : str
+        domain to consider for masking
+    deagg : bool
+        Deaggregation of variable, de-averaging and de-accumulation are currently
+        available
+    chunks : Dict(str, int), optional
+        chunk size for each dimension to be loaded.
+    dask_nworkers : int, optional
+        if set, data reading is done in parallel using dask_nworkers workers
+
+    Returns
+    -------
+    da : xarray.DataArray
+        masked DataArray
+
+    """
+    # get domain
+    if gridfile:
+        gd = get_grid(gridfile)
+    # check compatibility of grid, domain and data
+    if domain != "all" and gridfile:
+        check_grid(
+            filelist, gd, varname, level, chunks=chunks, dask_nworkers=dask_nworkers
+        )
+
+    # read the data
+    tstart = time.perf_counter()
+    da = var_from_files(
+        filelist,
+        varname,
+        level,
+        parallel=True,
+        chunks=chunks,
+        dask_nworkers=dask_nworkers,
+    )
+    tend = time.perf_counter()
+    telapsed = tend - tstart
+    logging.info("reading time elapsed: %f", telapsed)
+
+    # data deaggregation
+    if not deagg:
+        pass
+    else:
+        da = deaggregate(da)
+
+    # apply domain mask if domain is set
+    if domain != "all" and "gd" in locals():
+        da = mask_domain(da, domain, gd)
+    elif domain != "all" and "gd" not in locals():
+        da = mask_domain(da, domain)
+
+    return da
+
+    # pylint: enable=too-many-arguments

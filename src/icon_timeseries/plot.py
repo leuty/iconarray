@@ -51,7 +51,7 @@ def plot_ts_multiple(
 
     # loop over parameters
     for i, (p_key, p_val) in enumerate(da_dict.items()):
-        e_val = xr.DataArray()
+        e_val: xr.DataArray = xr.DataArray()  # pylint needs to have the loop variable
         exp_count = 0
         if colors is None:
             # Take the color sequence from a colormap
@@ -288,3 +288,108 @@ def plot_domain(
         logging.info("saved figure %s", fname)
 
     return fig
+
+
+# pylint: disable=too-many-arguments, too-many-locals
+def plot_histograms(
+    da_dict: dict[str, xr.DataArray],
+    domain: str | None = None,
+    min_bin: float = 0.1,
+    max_bin: float = 100.0,
+    nbins: int = 50,
+    xlog: bool = False,
+    ylog: bool = False,
+    save: bool = True,
+) -> tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
+    """Draw a histogram plot for a dataset over a given domain.
+
+    Parameters
+    ----------
+    da_dict : Dict[str, xarray.DataArray]
+        dictionary holding the data {"expid": xarray.DataArray}. the
+        dimension of the xarray.DataArray has to be 'time'
+    domain : str, optional
+        name of the domain for the plot title
+    min_bin : float, optional
+        lowest bin bound
+    max_bin : float, optional
+        highest bin bound
+    nbins : int, optional
+        number of bins
+    xlog : bool, optional
+        log. x-axis
+    ylog : bool, optional
+        log. y-axis
+    save : bool, optional
+        save the figure
+
+    Returns
+    -------
+    fig : matplotlib.figure.Figure
+        figure object
+    ax : matplotlib.axes.Axes
+        axes object
+
+    """
+    logging.info("Histogram plotting started...")
+    fig, ax = plt.subplots(1)
+
+    # prepare bins
+    # https://stackoverflow.com/questions/6855710/
+    # how-to-have-logarithmic-bins-in-a-python-histogram
+    if xlog:
+        bins = 10.0 ** np.linspace(np.log10(min_bin), np.log10(max_bin), nbins)
+    else:
+        bins = np.linspace(min_bin, max_bin, nbins)
+
+    # Take the color sequence from a colormap, analogous to timeseries
+    cmap = plt.cm.get_cmap("gist_rainbow", len(da_dict) + 1)
+
+    logging.info("Number of experiments to plot: %i", len(da_dict))
+    # loop over runs/experiments
+    e_val: xr.DataArray = xr.DataArray()  # pylint needs to have the loop variable
+    for i, (e_key, e_val) in enumerate(da_dict.items()):
+        # loop over runs/experiments
+        logging.info("histogram plotting for exp %s", e_key)
+        # set color
+        color = cmap(i)
+        vals = e_val.values.flatten()
+        counts, bin_edges = np.histogram(vals, bins)
+        width = np.diff(bin_edges)
+        ax.bar(
+            bin_edges[:-1],
+            counts,
+            width=width,
+            align="edge",
+            fill=False,
+            edgecolor=color,
+            alpha=0.8,
+            label=e_key,
+        )
+    ax.set_title(f"Experiments {', '.join(list(da_dict.keys()))}")  # remove brackets
+    ax.set_xlabel(f"{e_val.name} {e_val.GRIB_stepType} ({e_val.GRIB_units})")
+    ax.set_ylabel("Frequency count (-)")
+    ax.grid(True, which="both", axis="both", linestyle="--")
+    ax.legend()
+    if xlog:
+        ax.set_xscale("log")
+    if ylog:
+        ax.set_yscale("log")
+
+    try:
+        fig.suptitle(f"Histogram plots for domain {domain}, level {e_val.level}")
+    except AttributeError:
+        fig.suptitle(f"Histogram plots for domain {domain}")
+
+    if save:
+        try:
+            fname = (
+                f"histograms_{e_val.name}_{'-'.join(da_dict.keys())}_l{e_val.level}.png"
+            )
+        except AttributeError:
+            fname = f"histograms_{e_val.name}_{'-'.join(da_dict.keys())}.png"
+        # fig.set_size_inches(4.0, 8.0)
+        fig.savefig(fname, dpi=300)
+        logging.info("saved figure %s", fname)
+
+    return fig, ax

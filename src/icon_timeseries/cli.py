@@ -16,7 +16,9 @@ from . import __version__
 from .handle_grid import get_domain
 from .handle_grid import get_grid
 from .plot import plot_domain
+from .plot import plot_histograms
 from .plot import plot_ts_multiple
+from .prepare_data import prepare_masked_da
 from .prepare_data import prepare_meanmax
 from .prepare_data import prepare_nn
 
@@ -175,7 +177,7 @@ def meanmax(
     type=str,
     help="Coordinates (format 'lon,lat') for nearest neighbour lookup.",
 )
-@click.option("--level", default=None, type=int, help="model level index")
+@click.option("--level", default=None, type=float, help="model level values")
 @click.option(
     "--gridfile",
     default=None,
@@ -198,7 +200,7 @@ def meanmax(
 def nearest_neighbour(
     exp: Tuple[Tuple, ...],
     varname: str,
-    level: int | None,
+    level: float | None,
     gridfile: str | None,
     lonlat: str,
     deagg: bool,
@@ -239,6 +241,136 @@ def nearest_neighbour(
 
     # plot the time series
     plot_ts_multiple(da_dict, domain=lonlat)
+
+
+@main.command()
+@click.option(
+    "--exp",
+    required=True,
+    type=(str, str),
+    nargs=2,
+    multiple=True,
+    help=(
+        "experiment info. file pattern to files to read, will be expanded to a "
+        "list with glob.glob, and experiment identifier"
+    ),
+)
+@click.option(
+    "--varname", required=True, type=str, help="GRIB shortName of the variable"
+)
+@click.option("--level", default=None, type=float, help="model level value")
+@click.option(
+    "--color",
+    default=None,
+    type=str,
+    multiple=True,
+    help="color to use for experiments in plot, used as specified",
+)
+@click.option(
+    "--gridfile",
+    default=None,
+    type=str,
+    help="ICON grid file, needed for unstructured grid",
+)
+@click.option(
+    "--domain",
+    default="all",
+    type=str,
+    help="domain to consider, please define in domains.yaml",
+)
+@click.option(
+    "--deagg",
+    is_flag=True,
+    help="deagreggation of variable, method is detected from GRIB encoding "
+    "(de-averaging and de-accumulation are currently implemented)",
+)
+@click.option(
+    "--bins",
+    type=(float, float, int),
+    default=(0.1, 100.0, 50),
+    nargs=3,
+    help="bins for histogram, format: min (float) max (float) n_bins (int).",
+)
+@click.option(
+    "--xlog",
+    "xlog",
+    default=False,
+    is_flag=True,
+    type=bool,
+    help="plot on x-logscale with logarithmic bins",
+)
+@click.option(
+    "--ylog",
+    "ylog",
+    default=False,
+    is_flag=True,
+    type=bool,
+    help="plot on y-logscale",
+)
+@click.option(
+    "--dask-workers",
+    "dask_nworkers",
+    default=None,
+    type=int,
+    help="ignored if the script does not run on a post-proc node",
+)
+def histograms(
+    exp: Tuple[Tuple, ...],
+    varname: str,
+    level: float | None,
+    color: str | None,
+    gridfile: str | None,
+    domain: str,
+    deagg: bool,
+    bins: Tuple[float, float, int],
+    xlog: bool,
+    ylog: bool,
+    dask_nworkers: int | None,
+):  # pylint: disable=too-many-arguments, too-many-locals
+    """Read data for a variable from GRIB file(s) and plot the values distribution."""
+    # check dask setup
+    chunks = None
+    if "pp" in os.uname().nodename:
+        logging.info("job is running on %s, dask_nworkers active", os.uname().nodename)
+        logging.info("number of dask workers: %d", dask_nworkers)
+        chunks = {"generalVerticalLayer": 1}
+    elif dask_nworkers and "pp" not in os.uname().nodename:
+        logging.warning(
+            "job is running on %s, dask_nworkers not active", os.uname().nodename
+        )
+        logging.warning("send your job on a post-proc node to activate dask_nworkers")
+        dask_nworkers = None
+
+    # gather data for all experiments
+    da_dict = {}  # type: Dict[str, xr.DataArray]
+    for one_exp in exp:
+        logging.info("Preparing experiment %s", one_exp[1])
+        filelist = glob.glob(one_exp[0])
+        if len(filelist) == 0:
+            logging.warning("file list for %s is empty, skipping...", one_exp[0])
+            continue
+        da_masked = prepare_masked_da(
+            filelist,
+            varname,
+            level,
+            gridfile,
+            domain=domain,
+            deagg=deagg,
+            chunks=chunks,
+            dask_nworkers=dask_nworkers,
+        )
+        da_dict[one_exp[1]] = da_masked.copy()
+
+    # plot the histograms
+    _, _ = plot_histograms(
+        da_dict,
+        domain,
+        min_bin=bins[0],
+        max_bin=bins[1],
+        nbins=bins[2],
+        xlog=xlog,
+        ylog=ylog,
+    )
 
 
 @main.command()
