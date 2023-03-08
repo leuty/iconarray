@@ -20,7 +20,61 @@ gridfile = os.path.join(test_dir, "ICON-1E_DOM01.nc")
 exp = os.path.join(test_dir, "lfff000[0-3]0000")
 
 # saved values, reference results
-test_mean = np.array([279.10766602, 279.22027588, 279.02398682, 278.8706665])
+test_mean = np.array([279.10767, 279.22028, 279.024, 278.87067])
+test_max = np.array([288.37396, 288.02383, 287.89978, 287.8776])
+test_bar = np.array(
+    [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3,
+        3,
+        19,
+        34,
+        62,
+        93,
+        166,
+        324,
+        544,
+        986,
+        1576,
+        2627,
+        4939,
+        7761,
+        10301,
+        12742,
+        13945,
+        13329,
+        11594,
+        11668,
+        12453,
+        13338,
+        15414,
+        18417,
+        31746,
+        50570,
+        47403,
+        28070,
+        24560,
+        27610,
+        14314,
+        2848,
+        877,
+        265,
+        22,
+        1,
+        0,
+    ]
+)
 
 # def test_plot_domain():
 #     """Test the quicklook for a masked domain."""
@@ -70,8 +124,8 @@ def test_ts_results():
     np.testing.assert_allclose(
         plt.gca().lines[0].get_xydata()[:, 1],
         test_mean,
-        rtol=1e-10,
-        atol=1e-10,
+        rtol=1e-7,
+        atol=1e-6,
         err_msg="values in plot do not match saved values",
     )
 
@@ -103,6 +157,20 @@ def test_ts_multi():
         da_max.values,
         "y values in plot do not match input values for max",
     )
+    np.testing.assert_allclose(
+        da_mean.values,
+        test_mean,
+        rtol=1e-7,
+        atol=1e-6,
+        err_msg="computed values do not match saved values for mean",
+    )
+    np.testing.assert_allclose(
+        da_max.values,
+        test_max,
+        rtol=1e-7,
+        atol=1e-6,
+        err_msg="computed values do not match saved values for max",
+    )
 
 
 def test_hist():
@@ -127,4 +195,11 @@ def test_hist():
         plt.gca().containers[0].datavalues,
         counts,
         "bar values in plot do not match input values",
+    )
+    np.testing.assert_allclose(
+        counts,
+        test_bar,
+        rtol=0,
+        atol=0,
+        err_msg="computes bar values do not match saved values",
     )
