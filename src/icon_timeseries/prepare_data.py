@@ -1,7 +1,5 @@
 """Data pre-processing for visualisation."""
 # Standard library
-import logging
-import time
 from typing import Dict
 from typing import List
 from typing import Tuple
@@ -81,11 +79,11 @@ def prepare_meanmax(
 
     return da_mean, da_max
 
+
 # pylint: enable=too-many-arguments
 
 
-
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments, too-many-locals
 def prepare_nn(
     filelist: List[str],
     varname: str,
@@ -133,7 +131,14 @@ def prepare_nn(
         )
 
     # read the data
-    da = get_var(filelist, varname, level, deagg=deagg, chunks=chunks, dask_nworkers=dask_nworkers)
+    da = get_var(
+        filelist,
+        varname,
+        level,
+        deagg=deagg,
+        chunks=chunks,
+        dask_nworkers=dask_nworkers,
+    )
 
     lon, lat = parse_coords(lonlat)
     if "gd" in locals():  # unstructured grid
@@ -145,7 +150,7 @@ def prepare_nn(
     return da_nn
 
 
-# pylint: enable=too-many-arguments
+# pylint: enable=too-many-arguments, too-many-locals
 
 
 # pylint: disable=too-many-arguments
@@ -197,7 +202,14 @@ def prepare_masked_da(
         )
 
     # read the data
-    da = get_var(filelist, varname, level, deagg=deagg, chunks=chunks, dask_nworkers=dask_nworkers)
+    da = get_var(
+        filelist,
+        varname,
+        level,
+        deagg=deagg,
+        chunks=chunks,
+        dask_nworkers=dask_nworkers,
+    )
 
     # apply domain mask if domain is set
     if domain != "all" and "gd" in locals():

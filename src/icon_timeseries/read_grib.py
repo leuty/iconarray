@@ -23,6 +23,7 @@ from .deaggregate import deaggregate
 xr.set_options(keep_attrs=True)
 
 
+# pylint: disable=too-many-arguments
 def get_var(
     filelist: List[str],
     varname: str,
@@ -77,6 +78,8 @@ def get_var(
 
     return da
 
+
+# pylint: enable=too-many-arguments
 
 # pylint: disable=too-many-arguments
 def var_from_files(
