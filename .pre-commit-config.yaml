@@ -38,6 +38,7 @@ repos:
         description: Check for spelling errors
         language: system
         entry: codespell
+        exclude: ^/requirements/environment.yml
 -   repo: local
     hooks:
     -   id: black

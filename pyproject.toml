@@ -160,5 +160,4 @@ ignore_directives = [
 ]
 
 [tool.codespell]
-skip = "./requirements/environment.yml"
 ignore-words-list = "inout"
