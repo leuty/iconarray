@@ -10,9 +10,8 @@ from typing import Tuple
 import xarray as xr
 
 # Local
-from .deaggregate import deaggregate
 from .handle_grid import get_grid
-from .read_grib import var_from_files
+from .read_grib import get_var
 from .utils import check_grid
 from .utils import ind_from_nn
 from .utils import mask_domain
@@ -82,8 +81,11 @@ def prepare_meanmax(
 
     return da_mean, da_max
 
+# pylint: enable=too-many-arguments
 
-# pylint: disable=too-many-locals
+
+
+# pylint: disable=too-many-arguments
 def prepare_nn(
     filelist: List[str],
     varname: str,
@@ -122,20 +124,6 @@ def prepare_nn(
         Nearest Neighbour Values
 
     """
-    # read the data
-    tstart = time.perf_counter()
-    da = var_from_files(
-        filelist,
-        varname,
-        level,
-        parallel=True,
-        chunks=chunks,
-        dask_nworkers=dask_nworkers,
-    )
-    tend = time.perf_counter()
-    telapsed = tend - tstart
-    logging.info("reading time elapsed: %f", telapsed)
-
     # get grid
     if gridfile:
         gd = get_grid(gridfile)
@@ -144,11 +132,8 @@ def prepare_nn(
             filelist, gd, varname, level, chunks=chunks, dask_nworkers=dask_nworkers
         )
 
-    # data deaggregation
-    if not deagg:
-        pass
-    else:
-        da = deaggregate(da)
+    # read the data
+    da = get_var(filelist, varname, level, deagg=deagg, chunks=chunks, dask_nworkers=dask_nworkers)
 
     lon, lat = parse_coords(lonlat)
     if "gd" in locals():  # unstructured grid
@@ -160,7 +145,7 @@ def prepare_nn(
     return da_nn
 
 
-# pylint: enable=too-many-arguments,too-many-locals
+# pylint: enable=too-many-arguments
 
 
 # pylint: disable=too-many-arguments
@@ -174,7 +159,7 @@ def prepare_masked_da(
     chunks: Dict[str, int] | None = None,
     dask_nworkers: int | None = None,
 ) -> xr.DataArray:
-    """Get a masked DataArray of a model quantity.
+    """Get a (domain) masked DataArray of a model quantity.
 
     Parameters
     ----------
@@ -182,13 +167,13 @@ def prepare_masked_da(
         list of files to read
     varname : str
         GRIB shortName of variable to extract
-    level : int
+    level : int, optional
         model level value
     gridfile : str, optional
         ICON grid file, needed for unstructured grid
-    domain : str
+    domain : str, optional
         domain to consider for masking
-    deagg : bool
+    deagg : bool, optional
         Deaggregation of variable, de-averaging and de-accumulation are currently
         available
     chunks : Dict(str, int), optional
@@ -212,24 +197,7 @@ def prepare_masked_da(
         )
 
     # read the data
-    tstart = time.perf_counter()
-    da = var_from_files(
-        filelist,
-        varname,
-        level,
-        parallel=True,
-        chunks=chunks,
-        dask_nworkers=dask_nworkers,
-    )
-    tend = time.perf_counter()
-    telapsed = tend - tstart
-    logging.info("reading time elapsed: %f", telapsed)
-
-    # data deaggregation
-    if not deagg:
-        pass
-    else:
-        da = deaggregate(da)
+    da = get_var(filelist, varname, level, deagg=deagg, chunks=chunks, dask_nworkers=dask_nworkers)
 
     # apply domain mask if domain is set
     if domain != "all" and "gd" in locals():
