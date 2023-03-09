@@ -7,15 +7,14 @@ Visualise time series of ICON data.
 This package provides functionalities to display time series from ICON output files. It handles GRIB input (necdf support is currently being developed) on the native. The package should actually also support COSMO data and data on a regular rotated pole grid, but this is features are less tested and might be buggy.
 
 ## Quick start
-1. Create an environment and install the dependencies: `tools/setup_env.sh -m`
+0. Activate conda, and ([optionally](#setup)) install mamba into your base environment: `conda install -c conda-forge mamba`
+1. Create an environment and install the dependencies: `tools/setup_env.sh -m` (remove `-m` flag if you dont use mamba)
 2. Activate the environment: `conda activate icon-timeseries`
 3. Install the package: `pip install --no-deps .`
 4. Setup ecCodes environment (only needs to be done once for the conda environment):
     - `tools/setup_grib_env.sh`
     - `conda deactivate; conda activate icon-timeseries`
 6. Check the installation: `pytest`
-
-*Hint*: If you don't have mamba installed, please have a look [here](#setup).
 
 You are now ready to go! For more information read below.
 
