@@ -16,8 +16,70 @@ from dask.distributed import Client
 from dask.distributed import LocalCluster
 from dask.distributed import performance_report
 
+# Local
+from .deaggregate import deaggregate
+
 # keep attributes on xarray Datasets and DataArrays
 xr.set_options(keep_attrs=True)
+
+
+# pylint: disable=too-many-arguments
+def get_var(
+    filelist: List[str],
+    varname: str,
+    level: float | None = None,
+    deagg: bool = False,
+    chunks: Dict[str, int] | None = None,
+    dask_nworkers: int | None = None,
+) -> xr.DataArray:
+    """Get a DataArray of a model quantity, deaggregate if required.
+
+    Parameters
+    ----------
+    filelist : list(str)
+        list of files to read
+    varname : str
+        GRIB shortName of variable to extract
+    level : int, optional
+        model level value
+    deagg : bool, optional
+        Deaggregation of variable, de-averaging and de-accumulation are currently
+        available
+    chunks : Dict(str, int), optional
+        chunk size for each dimension to be loaded.
+    dask_nworkers : int, optional
+        if set, data reading is done in parallel using dask_nworkers workers
+
+    Returns
+    -------
+    da : xarray.DataArray
+        DataArray with model data
+
+    """
+    # read and time
+    tstart = time.perf_counter()
+    da = var_from_files(
+        filelist,
+        varname,
+        level,
+        parallel=True,
+        chunks=chunks,
+        dask_nworkers=dask_nworkers,
+    )
+    tend = time.perf_counter()
+    telapsed = tend - tstart
+    logging.info("reading time elapsed: %f", telapsed)
+
+    # data deaggregation
+    if not deagg:
+        pass
+    else:
+        da = deaggregate(da)
+
+    return da
+
+
+# pylint: enable=too-many-arguments
 
 
 # pylint: disable=too-many-arguments

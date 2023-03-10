@@ -38,6 +38,12 @@ repos:
         description: Check for spelling errors
         language: system
         entry: codespell
+        exclude: >
+            (?x)^(
+                .*\.yml|
+                .*\.yaml
+            )$
+
 -   repo: local
     hooks:
     -   id: black
