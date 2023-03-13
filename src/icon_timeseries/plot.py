@@ -12,6 +12,7 @@ import matplotlib.dates as mdates  # type: ignore
 import matplotlib.pyplot as plt  # type: ignore
 import numpy as np
 import xarray as xr
+from cartopy.crs import PlateCarree  # type: ignore
 
 # Local
 from .handle_grid import IconGrid
@@ -237,13 +238,6 @@ def plot_domain(
     save: bool = False,
 ) -> matplotlib.figure.Figure:
     """Plot a quicklook of the domain, excluding masked regions."""
-    # Third-party
-    # pylint: disable=import-outside-toplevel
-    from cartopy.crs import PlateCarree  # type: ignore
-    from cartopy.feature import NaturalEarthFeature  # type: ignore
-
-    # pylint: enable=import-outside-toplevel
-
     if ax:
         fig = ax.get_figure()
     else:
@@ -261,14 +255,72 @@ def plot_domain(
         cy = gd.cy
     vals = np.ones(cy.size)
     vals[0] = 10.0  # tricontourf does not work when all values are equal
-    ax.tricontourf(cx, cy, vals, transform=PlateCarree(), alpha=0.5)
+
+    # plot the data
+    ax, _ = _plot_map(
+        cx, cy, vals, ax, transform=PlateCarree(), alpha=0.5, colormap=False
+    )
+
+    # add title
+    ax.set_title(f"domain: {domain_name}")
+
+    # save the figure
+    if save:
+        fname = f"domain_{domain_name.replace(' ', '')}.png"
+        plt.savefig(fname, dpi=300)
+        logging.info("saved figure %s", fname)
+
+    return fig
+
+
+def _plot_map(
+    cx: np.ndarray,
+    cy: np.ndarray,
+    vals: np.ndarray,
+    ax: matplotlib.axes.Axes,
+    colormap: bool | None = True,
+    **kwargs,
+) -> tuple[matplotlib.axes.Axes, matplotlib.colorbar.Colorbar | None]:
+    """Wrap tricontourf with map background.
+
+    Parameters
+    ----------
+    cx, cy : array-like
+        x ad y coordinates of the data
+    vals : zarray-like
+        height values over which the contour is drawn
+    ax :  matplotlib.axes.Axes
+        axes object
+    colormap : bool, optional
+        draw a colormap
+    kwargs
+        keyword arguments to matplotlib.pyplot.tricontourf()
+
+    Returns
+    -------
+    ax :  matplotlib.axes.Axes
+        axes object
+    cbar : matplotlib.colorbar.Colorbar
+        colorbar object
+
+    """
+    # Third-party
+    # pylint: disable=import-outside-toplevel
+    from cartopy.feature import NaturalEarthFeature  # type: ignore
+
+    # pylint: enable=import-outside-toplevel
+    # plot the data
+    im = ax.tricontourf(cx, cy, vals, **kwargs)
+    cbar = None
+    if colormap:
+        cbar = plt.colorbar(im, shrink=0.5)
 
     # set ticklabels, suppress gridlines, set axes limits
     gl = ax.gridlines(draw_labels=True, linewidth=0)
     gl.top_labels = False
     gl.right_labels = False
-    ax.set_xlim(gd.cx.min(), gd.cx.max())
-    ax.set_ylim(gd.cy.min(), gd.cy.max())
+    ax.set_xlim(cx.min(), cx.max())
+    ax.set_ylim(cy.min(), cy.max())
 
     # add borders and coasts
     ax.coastlines(resolution="10m", color="black")
@@ -277,17 +329,7 @@ def plot_domain(
         edgecolor="black",
         facecolor="none",
     )
-
-    # add title
-    ax.set_title(f"domain: {domain_name}")
-
-    # save the figute
-    if save:
-        fname = f"domain_{domain_name.replace(' ', '')}.png"
-        plt.savefig(fname, dpi=300)
-        logging.info("saved figure %s", fname)
-
-    return fig
+    return ax, cbar
 
 
 # pylint: disable=too-many-arguments, too-many-locals
