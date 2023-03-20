@@ -83,6 +83,65 @@ def prepare_meanmax(
 # pylint: enable=too-many-arguments
 
 
+# pylint: disable=too-many-arguments
+def prepare_time_avg(
+    filelist: List[str],
+    varname: str,
+    level: float | None = None,
+    deagg: bool = False,
+    chunks: Dict[str, int] | None = None,
+    dask_nworkers: int | None = None,
+) -> xr.DataArray:
+    """Get the temporal average (dim: valid_time) of a model quantity.
+
+    Parameters
+    ----------
+    filelist : list(str)
+        list of files to read
+    varname : str
+        GRIB shortName of variable to extract
+    level : float
+        model level value
+    deagg : bool
+        Deaggregation of variable, de-averaging and de-accumulation are currently
+        available
+    chunks : Dict(str, int), optional
+        chunk size for each dimension to be loaded.
+    dask_nworkers : int, optional
+        if set, data reading is done in parallel using dask_nworkers workers
+
+    Returns
+    -------
+    da_mean : xarray.DataArray
+        temporal average
+
+    """
+    # read the data
+    da = get_var(
+        filelist,
+        varname,
+        level,
+        deagg=deagg,
+        chunks=chunks,
+        dask_nworkers=dask_nworkers,
+    )
+
+    # compute average and maximum
+    if da.attrs["GRIB_gridType"] == "unstructured_grid":
+        da_mean = da.mean(dim="valid_time", skipna=True).compute()
+    else:
+        raise NotImplementedError(
+            f"This function does not yet support data on a "
+            f"{da.attrs['GRIB_gridType']} grid"
+        )
+    da_mean.attrs["avg_timerange"] = (da.valid_time.values[0], da.valid_time.values[-1])
+
+    return da_mean
+
+
+# pylint: enable=too-many-arguments
+
+
 # pylint: disable=too-many-arguments, too-many-locals
 def prepare_nn(
     filelist: List[str],
