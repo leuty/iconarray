@@ -17,10 +17,13 @@ from .handle_grid import get_domain
 from .handle_grid import get_grid
 from .plot import plot_domain
 from .plot import plot_histograms
+from .plot import plot_onmap
 from .plot import plot_ts_multiple
 from .prepare_data import prepare_masked_da
 from .prepare_data import prepare_meanmax
 from .prepare_data import prepare_nn
+from .prepare_data import prepare_time_avg
+from .utils import check_grid
 
 logging.getLogger(__name__)
 log_format = "%(levelname)8s: %(message)s [%(filename)s:%(lineno)s - %(funcName)s()]"
@@ -370,6 +373,126 @@ def histograms(
         nbins=bins[2],
         xlog=xlog,
         ylog=ylog,
+    )
+
+
+@main.command()
+@click.option(
+    "--exp",
+    required=True,
+    type=(str, str),
+    nargs=2,
+    multiple=False,
+    help=(
+        "experiment info. file pattern to files to read, will be expanded to a "
+        "list with glob.glob, and experiment identifier"
+    ),
+)
+@click.option(
+    "--varname", required=True, type=str, help="GRIB shortName of the variable"
+)
+@click.option("--level", default=None, type=float, help="model level value")
+@click.option(
+    "--gridfile",
+    default=None,
+    type=str,
+    help="ICON grid file, needed for unstructured grid",
+)
+@click.option(
+    "--deagg",
+    is_flag=True,
+    help="deagreggation of variable, method is detected from GRIB encoding "
+    "(de-averaging and de-accumulation are currently implemented)",
+)
+@click.option(
+    "--dask-workers",
+    "dask_nworkers",
+    default=None,
+    type=int,
+    help="ignored if the script does not run on a post-proc node",
+)
+def time_avg(
+    exp: Tuple[str, str],
+    varname: str,
+    level: float | None,
+    gridfile: str | None,
+    deagg: bool,
+    dask_nworkers: int | None,
+):  # pylint: disable=too-many-arguments,
+    """Read data for variable from GRIB file(s) and plot temporally averaged field."""
+    filelist = glob.glob(exp[0])
+    # check dask setup
+    chunks = None
+    if dask_nworkers and "ln" in os.uname().nodename:
+        logging.warning(
+            "job is running on %s, dask_nworkers are deactivated", os.uname().nodename
+        )
+        logging.warning("send your job on a post-proc node to activate dask_nworkers")
+        dask_nworkers = None
+    elif "ln" not in os.uname().nodename:
+        logging.info("job is running on %s, dask_nworkers active", os.uname().nodename)
+        logging.info("number of dask workers: %d", dask_nworkers)
+        chunks = {"generalVerticalLayer": 1}
+
+    # get grid
+    if gridfile:
+        gd = get_grid(gridfile)
+        # check compatibility of grid and data
+        check_grid(
+            filelist, gd, varname, level, chunks=chunks, dask_nworkers=dask_nworkers
+        )
+
+    # gather data
+    if len(filelist) == 0:
+        logging.warning("file list for %s is empty, nothing to do...")
+        sys.exit()
+
+    da = prepare_time_avg(
+        filelist,
+        varname,
+        level,
+        deagg=deagg,
+        chunks=chunks,
+        dask_nworkers=dask_nworkers,
+    )
+    # check dimensions
+    if ("values" in da.dims) and (len(da.dims) != 1):
+        logging.error(
+            "The data has the wrong dimensions: %s. Please provide a level to "
+            "reduce the dimensionality to 'values' only",
+            da.dims,
+        )
+        raise ValueError("Dimensions of data for time-avg must be 'values' only.")
+    if "values" not in da.dims:
+        logging.error(
+            "The data has the dimensions: %s. It must have 'values' only. If %s "
+            "is a horizontal dimension, support must be implemented for that grid.",
+            da.dims,
+            da.dims,
+        )
+        raise NotImplementedError(
+            f"Horizontal dimensions {da.dims} is not yet supported."
+        )
+
+    # plot the field
+    try:
+        title = (
+            f"{da.name} ({da.GRIB_stepType}, {da.GRIB_units}), "
+            f"level {da.level} \n"
+            f"average interval: {str(da.avg_timerange[0])[:13]} - "
+            f"{str(da.avg_timerange[1])[:13]}"
+        )
+    except AttributeError:
+        title = (
+            f"{da.name} ({da.GRIB_stepType}, {da.GRIB_units}) \n"
+            f"average interval: {str(da.avg_timerange[0])[:13]} - "
+            f"{str(da.avg_timerange[1])[:13]}"
+        )
+    _, _ = plot_onmap(
+        da,
+        gd,
+        title=title,
+        save=True,
     )
 
 
