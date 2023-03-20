@@ -23,8 +23,8 @@ If the tests fail, contact the package administrator Claire Merker.
 ## Content
 The main functionalities of this package are:
 * reading
-  * GRIB data (and netcdf data, soon to come)
-  * unstructured and regular grids
+  * GRIB data
+  * unstructured (and regular grids for some features)
   * ensemble data
   * multiple runs/experiments
   * optional dask parallelisation available
@@ -47,6 +47,8 @@ The functions of the package can be used in scripts or via pre-defined command-l
 * `icon-timeseries histograms`: histograms of the values of a model variable (can display multiple experiments)
 
 In order to use more than one dask worker for the parallelisation, the job needs to be send to the slurm queue (`postproc`). A script for `sbatch` containing an example call for `icon-timeseries meanmax` is provided: `sbatch.sh`
+
+_Warning:_ The support of data on regular lat/lon grids is not implemented for every feature, and is also not tested. Please use it with care! If a feature does not support data on a regular grid, it can probably be added easily. it might be worth to look at the code.
 
 ## Developing in icon-timeseries
 
