@@ -169,7 +169,7 @@ def var_from_files(
             varname,
         )
         sys.exit()
-    if level:
+    if level is not None:
         try:
             da = da.sel({da.GRIB_typeOfLevel: level}, method="nearest", tolerance=1e-09)
             da.attrs["level"] = level
