@@ -273,6 +273,68 @@ def plot_domain(
     return fig
 
 
+def plot_onmap(
+    data: xr.DataArray,
+    gd: IconGrid,
+    ax: matplotlib.axes.Axes | None = None,
+    title: str = "",
+    save: bool = False,
+) -> tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
+    """Plot data on a map.
+
+    Parameters
+    ----------
+    data : xr.DataArray
+        data, only dimension has to be "values"
+    gd : IconGrid
+        grid object
+    ax : matplotlib.axes.Axes, optional
+        axes to use
+    title : str
+        ax title
+    save : bool, optional
+        save the figure
+
+    Returns
+    -------
+    fig : matplotlib.figure.Figure
+        figure object
+    ax : matplotlib.axes.Axes
+        axes object
+
+    """
+    if ax:
+        fig = ax.get_figure()
+    else:
+        fig, ax = plt.subplots(subplot_kw={"projection": PlateCarree()})
+
+    # plot the data
+    ax, _ = _plot_map(gd.cx, gd.cy, data.values, ax, transform=PlateCarree())
+
+    # set title and legend
+    if title:
+        ax.set_title(title)
+    else:
+        try:
+            ax.set_title(
+                f"{data.name} ({data.GRIB_stepType}, {data.GRIB_units}), "
+                f"level {data.level}"
+            )
+        except AttributeError:
+            ax.set_title(f"{data.name} ({data.GRIB_stepType}, {data.GRIB_units})")
+
+    # save the figure
+    if save:
+        try:
+            fname = f"map_{data.name}_l{data.level}.png"
+        except AttributeError:
+            fname = f"map_{data.name}.png"
+        plt.savefig(fname, bbox_inches="tight", dpi=300)
+        logging.info("saved figure %s", fname)
+
+    return fig, ax
+
+
 def _plot_map(
     cx: np.ndarray,
     cy: np.ndarray,
@@ -289,7 +351,7 @@ def _plot_map(
         x ad y coordinates of the data
     vals : zarray-like
         height values over which the contour is drawn
-    ax :  matplotlib.axes.Axes
+    ax : matplotlib.axes.Axes
         axes object
     colormap : bool, optional
         draw a colormap
