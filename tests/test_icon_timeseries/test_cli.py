@@ -41,3 +41,18 @@ class TestCmd(_TestCLI):
         result = self.call(["meanmax", "-h"])
         assert result.output.startswith("Usage: ")
         assert "Show this message and exit." in result.output
+
+    def test_nearest_neighbour(self):
+        result = self.call(["nearest-neighbour", "-h"])
+        assert result.output.startswith("Usage: ")
+        assert "Show this message and exit." in result.output
+
+    def test_histograms(self):
+        result = self.call(["histograms", "-h"])
+        assert result.output.startswith("Usage: ")
+        assert "Show this message and exit." in result.output
+
+    def test_time_avg(self):
+        result = self.call(["time-avg", "-h"])
+        assert result.output.startswith("Usage: ")
+        assert "Show this message and exit." in result.output
