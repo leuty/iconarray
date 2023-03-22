@@ -26,7 +26,12 @@ def _create_test_da() -> xr.DataArray:
 
 
 def test_deaggregate():
-    """Test deaggregation."""
+    """Test deaggregation.
+
+    The first ini_time has three lead_times: the third value is deaggregated since
+    the initialisation time is skipped, and the first lead time does not need deag-
+    gregation. The second ini_time has two lead_timed: nothing to deaggregate.
+    """
     test_da = _create_test_da()
     ini_t1 = np.repeat(
         np.array([datetime.datetime(2022, 11, 28, hour=0)], dtype="datetime64[h]"), 3
@@ -41,6 +46,34 @@ def test_deaggregate():
     )
     agg_da = test_da.copy()
     agg_da[2] = agg_da[1, :] + test_da[2, :]
+    agg_da = agg_da.assign_attrs({"GRIB_stepType": "accum"})
+    deagg_da = deaggregate(agg_da)
+    np.testing.assert_array_almost_equal(deagg_da, test_da, decimal=14)
+
+
+def test_deaggregate_singletimestep():
+    """Test deaggregation with single time step to deaggregate for one ini_time.
+
+    The first ini_time has only one lead_time: it cannot be deaggregated and values
+    are set to NaN. The second ini_time has four lead_timed: deaggregation is done
+    from lead_time three on.
+    """
+    test_da = _create_test_da()
+    ini_t1 = np.repeat(
+        np.array([datetime.datetime(2022, 11, 28, hour=0)], dtype="datetime64[h]"), 1
+    )
+    ini_t2 = np.repeat(
+        np.array([datetime.datetime(2022, 11, 28, hour=1)], dtype="datetime64[h]"), 4
+    )
+    ini_times = np.concatenate((ini_t1, ini_t2))
+    test_da = test_da.drop_vars("ini_time")
+    test_da = test_da.assign_coords(
+        {"ini_time": ("valid_time", ini_times)}  # type:ignore
+    )
+    agg_da = test_da.copy()
+    test_da[0] = np.nan
+    agg_da[3] = agg_da[2, :] + test_da[3, :]
+    agg_da[4] = agg_da[3, :] + test_da[4, :]
     agg_da = agg_da.assign_attrs({"GRIB_stepType": "accum"})
     deagg_da = deaggregate(agg_da)
     np.testing.assert_array_almost_equal(deagg_da, test_da, decimal=14)
