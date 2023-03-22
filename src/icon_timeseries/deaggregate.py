@@ -54,6 +54,20 @@ def deaverage(da: xr.DataArray) -> xr.DataArray:
     # define time step and check for irregularities
     dt = _check_time_steps(da)
 
+    # if only one lead_time is found for this ini_time, no deaggregation can be
+    # done: the data is set to nan to avoid confusion
+    if dt == -1:
+        logging.warning(
+            "Found only one valid_time for ini_time %s. No deaggregation possible: "
+            "data set to NaN.",
+            da.ini_time.values,
+        )
+        da.values[:] = np.nan
+        da.attrs[
+            "GRIB_stepType"
+        ] = "instant"  # not nice but needed for correct plotting title
+        return da
+
     # get time step number
     n_fcst = ((da.valid_time - da.ini_time[0]) / dt).astype(np.int32)
     # ignore lead time 0
@@ -86,6 +100,20 @@ def deagg_sum(da: xr.DataArray) -> xr.DataArray:
 
     # check for irregularities in time steps
     dt = _check_time_steps(da)
+
+    # if only one lead_time is found for this ini_time, no deaggregation can be
+    # done: the data is set to nan to avoid confusion
+    if dt == -1:
+        logging.warning(
+            "Found only one valid_time for ini_time %s. No deaggregation possible: "
+            "data set to NaN.",
+            da.ini_time.values,
+        )
+        da.values[:] = np.nan
+        da.attrs[
+            "GRIB_stepType"
+        ] = "instant"  # not nice but needed for correct plotting title
+        return da
 
     # ignore lead time 0
     time = da.valid_time[da.valid_time >= (da.ini_time[0] + dt)]
@@ -146,6 +174,12 @@ def _check_time_steps(da: xr.DataArray) -> float:
     """
     # get steps between available forecast times
     dt = np.unique(da.valid_time[1:].values - da.valid_time[:-1].values)
+
+    # if dt is empty, only one valid_time is associated to the current ini_time:
+    # no deaggregation can be performed with just one time step, return -1
+    if not dt:
+        return -1
+
     # check for irregularities
     if len(dt) != 1:
         logging.warning(
