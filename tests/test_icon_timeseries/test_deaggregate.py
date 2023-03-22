@@ -55,7 +55,7 @@ def test_deaggregate_singletimestep():
     """Test deaggregation with single time step to deaggregate for one ini_time.
 
     The first ini_time has only one lead_time: it cannot be deaggregated and values
-    are set to NaN. The second ini_time has four lead_timed: deaggregation is done
+    are kept as is. The second ini_time has four lead_timed: deaggregation is done
     from lead_time three on.
     """
     test_da = _create_test_da()
@@ -71,7 +71,6 @@ def test_deaggregate_singletimestep():
         {"ini_time": ("valid_time", ini_times)}  # type:ignore
     )
     agg_da = test_da.copy()
-    test_da[0] = np.nan
     agg_da[3] = agg_da[2, :] + test_da[3, :]
     agg_da[4] = agg_da[3, :] + test_da[4, :]
     agg_da = agg_da.assign_attrs({"GRIB_stepType": "accum"})
