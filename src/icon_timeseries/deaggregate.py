@@ -62,7 +62,7 @@ def deaverage(da: xr.DataArray) -> xr.DataArray:
             "data set to NaN.",
             da.ini_time.values,
         )
-        da.values[:] = np.nan
+        da.loc[:] = np.nan
         da.attrs[
             "GRIB_stepType"
         ] = "instant"  # not nice but needed for correct plotting title
@@ -109,7 +109,7 @@ def deagg_sum(da: xr.DataArray) -> xr.DataArray:
             "data set to NaN.",
             da.ini_time.values,
         )
-        da.values[:] = np.nan
+        da.loc[:] = np.nan
         da.attrs[
             "GRIB_stepType"
         ] = "instant"  # not nice but needed for correct plotting title
