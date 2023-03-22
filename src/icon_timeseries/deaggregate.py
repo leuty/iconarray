@@ -55,14 +55,13 @@ def deaverage(da: xr.DataArray) -> xr.DataArray:
     dt = _check_time_steps(da)
 
     # if only one lead_time is found for this ini_time, no deaggregation can be
-    # done: the data is set to nan to avoid confusion
+    # done: the data is left as is.
     if dt == -1:
         logging.warning(
             "Found only one valid_time for ini_time %s. No deaggregation possible: "
             "data set to NaN.",
             da.ini_time.values,
         )
-        da.loc[:] = np.nan
         da.attrs[
             "GRIB_stepType"
         ] = "instant"  # not nice but needed for correct plotting title
@@ -102,14 +101,12 @@ def deagg_sum(da: xr.DataArray) -> xr.DataArray:
     dt = _check_time_steps(da)
 
     # if only one lead_time is found for this ini_time, no deaggregation can be
-    # done: the data is set to nan to avoid confusion
+    # done. the data is left as is.
     if dt == -1:
-        logging.warning(
-            "Found only one valid_time for ini_time %s. No deaggregation possible: "
-            "data set to NaN.",
+        logging.info(
+            "Found only one valid_time for ini_time %s. No deaggregation possible.",
             da.ini_time.values,
         )
-        da.loc[:] = np.nan
         da.attrs[
             "GRIB_stepType"
         ] = "instant"  # not nice but needed for correct plotting title
