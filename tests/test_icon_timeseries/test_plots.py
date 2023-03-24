@@ -9,12 +9,15 @@ import matplotlib.pyplot as plt  # type: ignore
 import numpy as np
 
 # First-party
+from icon_timeseries.handle_grid import get_grid
 from icon_timeseries.plot import plot_histograms
+from icon_timeseries.plot import plot_onmap
 from icon_timeseries.plot import plot_ts
 from icon_timeseries.plot import plot_ts_multiple
 from icon_timeseries.prepare_data import prepare_masked_da
 from icon_timeseries.prepare_data import prepare_meanmax
 from icon_timeseries.prepare_data import prepare_nn
+from icon_timeseries.prepare_data import prepare_time_avg
 
 # single experiment, deterministic
 test_single = "/store/s83/cmerker/test_data/icon_timeseries/data/test_plots"
@@ -45,7 +48,8 @@ with open(os.path.join(test_exps, "test_bar_2.pckl"), "rb") as f:
     test_bar_2 = pickle.load(f)
 with open(os.path.join(test_exps, "test_nn.pckl"), "rb") as f:
     test_nn = pickle.load(f)
-
+with open(os.path.join(test_single, "test_time_avg.pckl"), "rb") as f:
+    test_time_avg = pickle.load(f)
 
 # def test_plot_domain():
 #     """Test the quicklook for a masked domain."""
@@ -172,7 +176,7 @@ def test_hist():
         test_bar,
         rtol=0,
         atol=0,
-        err_msg="computes bar values do not match saved values",
+        err_msg="computed bar values do not match saved values",
     )
 
 
@@ -196,14 +200,14 @@ def test_hist_multiexps():
         test_bar_1,
         rtol=0,
         atol=0,
-        err_msg="computes bar values do not match saved values for exp1",
+        err_msg="computed bar values do not match saved values for exp1",
     )
     np.testing.assert_allclose(
         plt.gca().containers[1].datavalues,
         test_bar_2,
         rtol=0,
         atol=0,
-        err_msg="computes bar values do not match saved values for exp2",
+        err_msg="computed bar values do not match saved values for exp2",
     )
 
 
@@ -244,4 +248,34 @@ def test_ts_nn_multi():
         rtol=1e-7,
         atol=1e-6,
         err_msg="computed values do not match saved values",
+    )
+
+
+def test_time_avg_plot():
+    """Test plotting a temporal average on a map."""
+    filelist = glob.glob(exp_s)
+    da = prepare_time_avg(
+        filelist,
+        "T",
+        1,
+    )
+    gd = get_grid(gdf)
+    _, _ = plot_onmap(
+        da,
+        gd,
+        save=False,
+    )
+    np.testing.assert_allclose(
+        plt.gca().collections[2].get_paths()[0].vertices,
+        test_time_avg.vertices,
+        rtol=1e-7,
+        atol=1e-6,
+        err_msg="computed Path vertices values do not match saved values",
+    )
+    np.testing.assert_allclose(
+        plt.gca().collections[2].get_paths()[0].codes,
+        test_time_avg.codes,
+        rtol=1e-7,
+        atol=1e-6,
+        err_msg="computed Path codes values do not match saved values",
     )
