@@ -447,6 +447,7 @@ def time_avg(
         logging.warning("file list for %s is empty, nothing to do...")
         sys.exit()
 
+    # pylint: disable=duplicate-code
     da = prepare_time_avg(
         filelist,
         varname,
@@ -455,6 +456,8 @@ def time_avg(
         chunks=chunks,
         dask_nworkers=dask_nworkers,
     )
+    # pylint: enable=duplicate-code
+
     # check dimensions
     if ("values" in da.dims) and (len(da.dims) != 1):
         logging.error(
