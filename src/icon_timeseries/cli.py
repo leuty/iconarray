@@ -394,7 +394,7 @@ def histograms(
 @click.option("--level", default=None, type=float, help="model level value")
 @click.option(
     "--gridfile",
-    default=None,
+    required=True,
     type=str,
     help="ICON grid file, needed for unstructured grid",
 )
@@ -415,7 +415,7 @@ def time_avg(
     exp: Tuple[str, str],
     varname: str,
     level: float | None,
-    gridfile: str | None,
+    gridfile: str,
     deagg: bool,
     dask_nworkers: int | None,
 ):  # pylint: disable=too-many-arguments,
@@ -435,12 +435,11 @@ def time_avg(
         chunks = {"generalVerticalLayer": 1}
 
     # get grid
-    if gridfile:
-        gd = get_grid(gridfile)
-        # check compatibility of grid and data
-        check_grid(
-            filelist, gd, varname, level, chunks=chunks, dask_nworkers=dask_nworkers
-        )
+    gd = get_grid(gridfile)
+    # check compatibility of grid and data
+    check_grid(
+        filelist, gd, varname, level, chunks=chunks, dask_nworkers=dask_nworkers
+    )
 
     # gather data
     if len(filelist) == 0:
