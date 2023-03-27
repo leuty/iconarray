@@ -478,19 +478,10 @@ def time_avg(
         )
 
     # plot the field
-    try:
-        title = (
-            f"{da.name} ({da.GRIB_stepType}, {da.GRIB_units}), "
-            f"level {da.level} \n"
-            f"average interval: {str(da.avg_timerange[0])[:13]} - "
-            f"{str(da.avg_timerange[1])[:13]}"
-        )
-    except AttributeError:
-        title = (
-            f"{da.name} ({da.GRIB_stepType}, {da.GRIB_units}) \n"
-            f"average interval: {str(da.avg_timerange[0])[:13]} - "
-            f"{str(da.avg_timerange[1])[:13]}"
-        )
+    title = f"{da.name} ({da.GRIB_stepType}, {da.GRIB_units})"
+    if hasattr(da, "level"):
+        title += f", level {da.level}"
+    title += f"\n average interval: {str(da.avg_timerange[0])[:13]} - {str(da.avg_timerange[1])[:13]}"
     _, _ = plot_onmap(
         da,
         gd,
