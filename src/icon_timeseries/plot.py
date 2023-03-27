@@ -85,16 +85,13 @@ def plot_ts_multiple(
             exp_count += 1
 
         # set title and legend
-        try:
-            axs[i].set_title(
-                f"{e_val.name} {p_key} ({e_val.GRIB_stepType}, {e_val.GRIB_units}) "
-                f"for {domain}, level {e_val.level}"
-            )
-        except AttributeError:
-            axs[i].set_title(
-                f"{e_val.name} {p_key} ({e_val.GRIB_stepType}, {e_val.GRIB_units}) "
-                f"for {domain}"
-            )
+        title = (
+            f"{e_val.name} {p_key} ({e_val.GRIB_stepType}, {e_val.GRIB_units}) "
+            f"for {domain}"
+        )
+        if hasattr(e_val, "level"):
+            title += f", level {e_val.level}"
+        axs[i].set_title(title)
         axs[i].legend()
 
     for idx, ax in np.ndenumerate(axs):
@@ -102,12 +99,10 @@ def plot_ts_multiple(
             ax.xaxis.set_ticklabels([])
 
     if save:
-        try:
-            fname = (
-                f"timeseries_{e_val.name}_{'-'.join(da_dict.keys())}_l{e_val.level}.png"
-            )
-        except AttributeError:
-            fname = f"timeseries_{e_val.name}_{'-'.join(da_dict.keys())}.png"
+        fname = f"timeseries_{e_val.name}_{'-'.join(da_dict.keys())}"
+        if hasattr(e_val, "level"):
+            fname += f"_l{e_val.level}"
+        fname += ".png"
         plt.savefig(fname, bbox_inches="tight", dpi=300)
         logging.info("saved figure %s", fname)
 
@@ -312,23 +307,18 @@ def plot_onmap(
     ax, _ = _plot_map(gd.cx, gd.cy, data.values, ax, transform=PlateCarree())
 
     # set title and legend
-    if title:
-        ax.set_title(title)
-    else:
-        try:
-            ax.set_title(
-                f"{data.name} ({data.GRIB_stepType}, {data.GRIB_units}), "
-                f"level {data.level}"
-            )
-        except AttributeError:
-            ax.set_title(f"{data.name} ({data.GRIB_stepType}, {data.GRIB_units})")
+    if not title:
+        title = f"{data.name} ({data.GRIB_stepType}, {data.GRIB_units})"
+        if hasattr(data, "level"):
+            title += f", level {data.level}"
+    ax.set_title(title)
 
     # save the figure
     if save:
-        try:
-            fname = f"map_{data.name}_l{data.level}.png"
-        except AttributeError:
-            fname = f"map_{data.name}.png"
+        fname = f"map_{data.name}"
+        if hasattr(data, "level"):
+            fname += f"_l{data.level}"
+        fname += ".png"
         plt.savefig(fname, bbox_inches="tight", dpi=300)
         logging.info("saved figure %s", fname)
 
@@ -480,18 +470,16 @@ def plot_histograms(
     if ylog:
         ax.set_yscale("log")
 
-    try:
-        fig.suptitle(f"Histogram plots for domain {domain}, level {e_val.level}")
-    except AttributeError:
-        fig.suptitle(f"Histogram plots for domain {domain}")
+    title = f"Histogram plots for domain {domain}"
+    if hasattr(e_val, "level"):
+        title += f", level {e_val.level}"
+    fig.suptitle(title)
 
     if save:
-        try:
-            fname = (
-                f"histograms_{e_val.name}_{'-'.join(da_dict.keys())}_l{e_val.level}.png"
-            )
-        except AttributeError:
-            fname = f"histograms_{e_val.name}_{'-'.join(da_dict.keys())}.png"
+        fname = f"histograms_{e_val.name}_{'-'.join(da_dict.keys())}"
+        if hasattr(e_val, "level"):
+            fname += f"_l{e_val.level}"
+        fname += ".png"
         # fig.set_size_inches(4.0, 8.0)
         fig.savefig(fname, dpi=300)
         logging.info("saved figure %s", fname)
