@@ -157,7 +157,7 @@ def plot_ts(
     ax.plot(times, data, **kwargs)
 
     # set the title
-    if title:
+    if title is not None:
         ax.set_title(title)
     else:
         ax.set_title("data time series")
@@ -272,7 +272,7 @@ def plot_on_map(
     data: xr.DataArray,
     gd: IconGrid,
     ax: matplotlib.axes.Axes | None = None,
-    title: str = "",
+    title: str | None = None,
     save: bool = False,
 ) -> tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
     """Plot data on a map.
@@ -285,8 +285,9 @@ def plot_on_map(
         grid object
     ax : matplotlib.axes.Axes, optional
         axes to use
-    title : str
-        ax title
+    title : str, optional
+        ax title, a default title will be generated from the data if no title is
+        provided
     save : bool, optional
         save the figure
 
@@ -307,7 +308,7 @@ def plot_on_map(
     ax, _ = _plot_map(gd.cx, gd.cy, data.values, ax, transform=PlateCarree())
 
     # set title and legend
-    if not title:
+    if title is None:
         title = f"{data.name} ({data.GRIB_stepType}, {data.GRIB_units})"
         if hasattr(data, "level"):
             title += f", level {data.level}"
