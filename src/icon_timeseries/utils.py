@@ -1,6 +1,7 @@
 """Utils for data pre-processing."""
 # Standard library
 import logging
+import os
 import sys
 from datetime import datetime
 from typing import Dict
@@ -170,21 +171,40 @@ def datetime64_to_hourlystr(date: np.datetime64) -> str:
 
 
 def start_dask_cluster(
-    dask_nworkers: int,
-) -> tuple[LocalCluster, Client]:
+    dask_nworkers: int | None,
+) -> tuple[LocalCluster | None, Client | None]:
     """Start a dask cluster with dask_nworkers number of workers."""
-    cluster = LocalCluster()
-    cluster.scale(dask_nworkers)
-    client = Client(cluster)
-    logging.info("Dask cluster started! Dashboard at: %s", client.dashboard_link)
+    # only start dask cluster on compute nodes
+    if dask_nworkers and "ln" not in os.uname().nodename:
+        logging.info("job is running on %s, dask_nworkers active", os.uname().nodename)
+        logging.info("number of dask workers: %d", dask_nworkers)
+        cluster = LocalCluster()
+        cluster.scale(dask_nworkers)
+        client = Client(cluster)
+        logging.info("Dask cluster started! Dashboard at: %s", client.dashboard_link)
+    elif dask_nworkers and "ln" in os.uname().nodename:
+        logging.warning(
+            "job is running on %s, dask_nworkers is deactivated", os.uname().nodename
+        )
+        logging.warning("send your job on a post-proc node to activate dask_nworkers")
+        cluster = None
+        client = None
+    else:
+        logging.info("nothing to setup for dask, dask_nworkers=%s", dask_nworkers)
+        cluster = None
+        client = None
+
     return cluster, client
 
 
 def stop_dask_cluster(
-    cluster: LocalCluster,
-    client: Client,
+    cluster: LocalCluster | None,
+    client: Client | None,
 ):
     """Close dask cluster and disconnect client."""
-    client.close()
-    cluster.close()
-    logging.info("Dask cluster stopped!")
+    if client:
+        client.close()
+        logging.info("Dask client stopped!")
+    if cluster:
+        cluster.close()
+        logging.info("Dask cluster stopped!")

@@ -2,7 +2,6 @@
 # Standard library
 import glob
 import logging
-import os
 import sys
 from typing import Dict
 from typing import Tuple
@@ -120,19 +119,12 @@ def meanmax(
     dask_nworkers: int | None,
 ):  # pylint: disable=too-many-arguments, too-many-locals
     """Read data for a variable from GRIB file(s) and plot a domain average and max."""
-    # check dask setup
-    chunks = None
-    if dask_nworkers and "ln" in os.uname().nodename:
-        logging.warning(
-            "job is running on %s, dask_nworkers are deactivated", os.uname().nodename
-        )
-        logging.warning("send your job on a post-proc node to activate dask_nworkers")
-        dask_nworkers = None
-    elif dask_nworkers and "ln" not in os.uname().nodename:
-        logging.info("job is running on %s, dask_nworkers active", os.uname().nodename)
-        logging.info("number of dask workers: %d", dask_nworkers)
+    # dask setup
+    cluster, client = start_dask_cluster(dask_nworkers)
+    if cluster:
         chunks = {"generalVerticalLayer": 1}
-        cluster, client = start_dask_cluster(dask_nworkers)
+    else:
+        chunks = None
 
     # gather data for all experiments
     da_dict: Dict[str, Dict[str, xr.DataArray]] = {"mean": {}, "max": {}}
@@ -161,8 +153,7 @@ def meanmax(
     # plot the time series
     plot_ts_multiple(da_dict, domain=domain)
 
-    if dask_nworkers is not None:
-        stop_dask_cluster(cluster, client)
+    stop_dask_cluster(cluster, client)
 
 
 @main.command()
@@ -216,19 +207,12 @@ def nearest_neighbour(
     dask_nworkers: int | None,
 ):  # pylint: disable=too-many-arguments
     """Plot a time series from GRIB data for given variables and coordinates."""
-    # check dask setup
-    chunks = None
-    if dask_nworkers and "pp" in os.uname().nodename:
-        logging.info("job is running on %s, dask_nworkers active", os.uname().nodename)
-        logging.info("number of dask workers: %d", dask_nworkers)
+    # dask setup
+    cluster, client = start_dask_cluster(dask_nworkers)
+    if cluster:
         chunks = {"generalVerticalLayer": 1}
-        cluster, client = start_dask_cluster(dask_nworkers)
-    elif dask_nworkers and "pp" not in os.uname().nodename:
-        logging.warning(
-            "job is running on %s, dask_nworkers not active", os.uname().nodename
-        )
-        logging.warning("send your job on a post-proc node to activate dask_nworkers")
-        dask_nworkers = None
+    else:
+        chunks = None
 
     # gather data for all experiments
     da_dict: Dict[str, Dict[str, xr.DataArray]] = {"values": {}}
@@ -251,8 +235,7 @@ def nearest_neighbour(
     # plot the time series
     plot_ts_multiple(da_dict, domain=lonlat)
 
-    if dask_nworkers is not None:
-        stop_dask_cluster(cluster, client)
+    stop_dask_cluster(cluster, client)
 
 
 @main.command()
@@ -340,19 +323,12 @@ def histograms(
     dask_nworkers: int | None,
 ):  # pylint: disable=too-many-arguments, too-many-locals
     """Read data for a variable from GRIB file(s) and plot the values distribution."""
-    # check dask setup
-    chunks = None
-    if dask_nworkers and "pp" in os.uname().nodename:
-        logging.info("job is running on %s, dask_nworkers active", os.uname().nodename)
-        logging.info("number of dask workers: %d", dask_nworkers)
+    # dask setup
+    cluster, client = start_dask_cluster(dask_nworkers)
+    if cluster:
         chunks = {"generalVerticalLayer": 1}
-        cluster, client = start_dask_cluster(dask_nworkers)
-    elif dask_nworkers and "pp" not in os.uname().nodename:
-        logging.warning(
-            "job is running on %s, dask_nworkers not active", os.uname().nodename
-        )
-        logging.warning("send your job on a post-proc node to activate dask_nworkers")
-        dask_nworkers = None
+    else:
+        chunks = None
 
     # gather data for all experiments
     da_dict = {}  # type: Dict[str, xr.DataArray]
@@ -384,8 +360,7 @@ def histograms(
         ylog=ylog,
     )
 
-    if dask_nworkers is not None:
-        stop_dask_cluster(cluster, client)
+    stop_dask_cluster(cluster, client)
 
 
 @main.command()
@@ -433,19 +408,12 @@ def time_avg(
 ):  # pylint: disable=too-many-arguments,
     """Read data for variable from GRIB file(s) and plot temporally averaged field."""
     filelist = glob.glob(exp[0])
-    # check dask setup
-    chunks = None
-    if dask_nworkers and "ln" in os.uname().nodename:
-        logging.warning(
-            "job is running on %s, dask_nworkers are deactivated", os.uname().nodename
-        )
-        logging.warning("send your job on a post-proc node to activate dask_nworkers")
-        dask_nworkers = None
-    elif dask_nworkers and "ln" not in os.uname().nodename:
-        logging.info("job is running on %s, dask_nworkers active", os.uname().nodename)
-        logging.info("number of dask workers: %d", dask_nworkers)
+    # dask setup
+    cluster, client = start_dask_cluster(dask_nworkers)
+    if cluster:
         chunks = {"generalVerticalLayer": 1}
-        cluster, client = start_dask_cluster(dask_nworkers)
+    else:
+        chunks = None
 
     # get grid
     gd = get_grid(gridfile)
@@ -502,8 +470,7 @@ def time_avg(
         save=True,
     )
 
-    if dask_nworkers is not None:
-        stop_dask_cluster(cluster, client)
+    stop_dask_cluster(cluster, client)
 
 
 @main.command()
