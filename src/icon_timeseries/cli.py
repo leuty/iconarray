@@ -17,7 +17,7 @@ from .handle_grid import get_domain
 from .handle_grid import get_grid
 from .plot import plot_domain
 from .plot import plot_histograms
-from .plot import plot_onmap
+from .plot import plot_on_map
 from .plot import plot_ts_multiple
 from .prepare_data import prepare_masked_da
 from .prepare_data import prepare_meanmax
@@ -484,7 +484,7 @@ def time_avg(
         f"{dt2str(da.avg_timerange[1])}"
     )
 
-    _, _ = plot_onmap(
+    _, _ = plot_on_map(
         da,
         gd,
         title=title,

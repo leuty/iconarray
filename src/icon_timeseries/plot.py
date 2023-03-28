@@ -268,7 +268,7 @@ def plot_domain(
     return fig
 
 
-def plot_onmap(
+def plot_on_map(
     data: xr.DataArray,
     gd: IconGrid,
     ax: matplotlib.axes.Axes | None = None,

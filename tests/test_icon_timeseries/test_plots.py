@@ -11,7 +11,7 @@ import numpy as np
 # First-party
 from icon_timeseries.handle_grid import get_grid
 from icon_timeseries.plot import plot_histograms
-from icon_timeseries.plot import plot_onmap
+from icon_timeseries.plot import plot_on_map
 from icon_timeseries.plot import plot_ts
 from icon_timeseries.plot import plot_ts_multiple
 from icon_timeseries.prepare_data import prepare_masked_da
@@ -260,7 +260,7 @@ def test_time_avg_plot():
         1,
     )
     gd = get_grid(gdf)
-    _, _ = plot_onmap(
+    _, _ = plot_on_map(
         da,
         gd,
         save=False,
