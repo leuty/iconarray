@@ -338,7 +338,7 @@ def _plot_map(
     Parameters
     ----------
     cx, cy : array-like
-        x ad y coordinates of the data
+        x and y coordinates of the data
     vals : zarray-like
         height values over which the contour is drawn
     ax : matplotlib.axes.Axes
