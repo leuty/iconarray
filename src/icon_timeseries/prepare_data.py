@@ -26,7 +26,6 @@ def prepare_meanmax(
     domain: str = "all",
     deagg: bool = False,
     chunks: Dict[str, int] | None = None,
-    dask_nworkers: int | None = None,
 ) -> Tuple[xr.DataArray, xr.DataArray]:
     """Get the domain average and domain maximum of a model quantity.
 
@@ -47,8 +46,6 @@ def prepare_meanmax(
         available
     chunks : Dict(str, int), optional
         chunk size for each dimension to be loaded.
-    dask_nworkers : int, optional
-        if set, data reading is done in parallel using dask_nworkers workers
 
     Returns
     -------
@@ -66,7 +63,6 @@ def prepare_meanmax(
         domain,
         deagg,
         chunks,
-        dask_nworkers,
     )
 
     # compute average and maximum
@@ -90,7 +86,6 @@ def prepare_time_avg(
     level: float | None = None,
     deagg: bool = False,
     chunks: Dict[str, int] | None = None,
-    dask_nworkers: int | None = None,
 ) -> xr.DataArray:
     """Get the temporal average (dim: valid_time) of a model quantity.
 
@@ -107,8 +102,6 @@ def prepare_time_avg(
         available
     chunks : Dict(str, int), optional
         chunk size for each dimension to be loaded.
-    dask_nworkers : int, optional
-        if set, data reading is done in parallel using dask_nworkers workers
 
     Returns
     -------
@@ -123,7 +116,6 @@ def prepare_time_avg(
         level,
         deagg=deagg,
         chunks=chunks,
-        dask_nworkers=dask_nworkers,
     )
 
     # compute average and maximum
@@ -151,7 +143,6 @@ def prepare_nn(
     gridfile: str | None = None,
     deagg: bool = False,
     chunks: Dict[str, int] | None = None,
-    dask_nworkers: int | None = None,
 ) -> xr.DataArray:
     """Get the domain average and domain maximum of a model quantity.
 
@@ -172,8 +163,6 @@ def prepare_nn(
         available
     chunks : Dict(str, int), optional
         chunk size for each dimension to be loaded.
-    dask_nworkers : int, optional
-        if set, data reading is done in parallel using dask_nworkers workers
 
     Returns
     -------
@@ -185,9 +174,7 @@ def prepare_nn(
     if gridfile:
         gd = get_grid(gridfile)
         # check compatibility of grid and data
-        check_grid(
-            filelist, gd, varname, level, chunks=chunks, dask_nworkers=dask_nworkers
-        )
+        check_grid(filelist, gd, varname, level, chunks=chunks)
 
     # read the data
     da = get_var(
@@ -196,7 +183,6 @@ def prepare_nn(
         level,
         deagg=deagg,
         chunks=chunks,
-        dask_nworkers=dask_nworkers,
     )
 
     lon, lat = parse_coords(lonlat)
@@ -221,7 +207,6 @@ def prepare_masked_da(
     domain: str = "all",
     deagg: bool = False,
     chunks: Dict[str, int] | None = None,
-    dask_nworkers: int | None = None,
 ) -> xr.DataArray:
     """Get a (domain) masked DataArray of a model quantity.
 
@@ -242,8 +227,6 @@ def prepare_masked_da(
         available
     chunks : Dict(str, int), optional
         chunk size for each dimension to be loaded.
-    dask_nworkers : int, optional
-        if set, data reading is done in parallel using dask_nworkers workers
 
     Returns
     -------
@@ -256,9 +239,7 @@ def prepare_masked_da(
         gd = get_grid(gridfile)
     # check compatibility of grid, domain and data
     if domain != "all" and gridfile:
-        check_grid(
-            filelist, gd, varname, level, chunks=chunks, dask_nworkers=dask_nworkers
-        )
+        check_grid(filelist, gd, varname, level, chunks=chunks)
 
     # read the data
     da = get_var(
@@ -267,7 +248,6 @@ def prepare_masked_da(
         level,
         deagg=deagg,
         chunks=chunks,
-        dask_nworkers=dask_nworkers,
     )
 
     # apply domain mask if domain is set

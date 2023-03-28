@@ -10,6 +10,8 @@ from typing import Tuple
 # Third-party
 import numpy as np
 import xarray as xr
+from dask.distributed import Client
+from dask.distributed import LocalCluster
 
 # Local
 from .handle_grid import get_domain
@@ -129,7 +131,6 @@ def check_grid(
     varname: str,
     level: float | None = None,
     chunks: Dict[str, int] | None = None,
-    dask_nworkers: int | None = None,
 ) -> None:
     """Check if provided grid matches provided dataset."""
     logging.info("read grid file and check if grid is compatible")
@@ -140,7 +141,6 @@ def check_grid(
         level,
         parallel=True,
         chunks=chunks,
-        dask_nworkers=dask_nworkers,
     )
     if da.attrs["GRIB_gridType"] == "unstructured" and not grid:
         logging.error("the data grid is unstructured, please provide a grid file!")
@@ -167,3 +167,24 @@ def datetime64_to_hourlystr(date: np.datetime64) -> str:
     datetime_date = date.astype("datetime64[s]").astype(datetime)
     date_string = datetime_date.strftime("%Y.%m.%d %HUTC")
     return date_string
+
+
+def start_dask_cluster(
+    dask_nworkers: int,
+) -> tuple[LocalCluster, Client]:
+    """Start a dask cluster with dask_nworkers number of workers."""
+    cluster = LocalCluster()
+    cluster.scale(dask_nworkers)
+    client = Client(cluster)
+    logging.info("Dask cluster started! Dashboard at: %s", client.dashboard_link)
+    return cluster, client
+
+
+def stop_dask_cluster(
+    cluster: LocalCluster,
+    client: Client,
+):
+    """Close dask cluster and disconnect client."""
+    client.close()
+    cluster.close()
+    logging.info("Dask cluster stopped!")

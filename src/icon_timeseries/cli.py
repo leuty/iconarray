@@ -25,6 +25,8 @@ from .prepare_data import prepare_nn
 from .prepare_data import prepare_time_avg
 from .utils import check_grid
 from .utils import datetime64_to_hourlystr as dt2str
+from .utils import start_dask_cluster
+from .utils import stop_dask_cluster
 
 logging.getLogger(__name__)
 log_format = "%(levelname)8s: %(message)s [%(filename)s:%(lineno)s - %(funcName)s()]"
@@ -116,7 +118,7 @@ def meanmax(
     domain: str,
     deagg: bool,
     dask_nworkers: int | None,
-):  # pylint: disable=too-many-arguments
+):  # pylint: disable=too-many-arguments, too-many-locals
     """Read data for a variable from GRIB file(s) and plot a domain average and max."""
     # check dask setup
     chunks = None
@@ -126,10 +128,11 @@ def meanmax(
         )
         logging.warning("send your job on a post-proc node to activate dask_nworkers")
         dask_nworkers = None
-    elif "ln" not in os.uname().nodename:
+    elif dask_nworkers and "ln" not in os.uname().nodename:
         logging.info("job is running on %s, dask_nworkers active", os.uname().nodename)
         logging.info("number of dask workers: %d", dask_nworkers)
         chunks = {"generalVerticalLayer": 1}
+        cluster, client = start_dask_cluster(dask_nworkers)
 
     # gather data for all experiments
     da_dict: Dict[str, Dict[str, xr.DataArray]] = {"mean": {}, "max": {}}
@@ -146,7 +149,6 @@ def meanmax(
             domain=domain,
             deagg=deagg,
             chunks=chunks,
-            dask_nworkers=dask_nworkers,
         )
         da_dict["mean"][one_exp[1]] = da_mean
         da_dict["max"][one_exp[1]] = da_max
@@ -158,6 +160,9 @@ def meanmax(
 
     # plot the time series
     plot_ts_multiple(da_dict, domain=domain)
+
+    if dask_nworkers is not None:
+        stop_dask_cluster(cluster, client)
 
 
 @main.command()
@@ -213,10 +218,11 @@ def nearest_neighbour(
     """Plot a time series from GRIB data for given variables and coordinates."""
     # check dask setup
     chunks = None
-    if "pp" in os.uname().nodename:
+    if dask_nworkers and "pp" in os.uname().nodename:
         logging.info("job is running on %s, dask_nworkers active", os.uname().nodename)
         logging.info("number of dask workers: %d", dask_nworkers)
         chunks = {"generalVerticalLayer": 1}
+        cluster, client = start_dask_cluster(dask_nworkers)
     elif dask_nworkers and "pp" not in os.uname().nodename:
         logging.warning(
             "job is running on %s, dask_nworkers not active", os.uname().nodename
@@ -239,12 +245,14 @@ def nearest_neighbour(
             gridfile,
             deagg=deagg,
             chunks=chunks,
-            dask_nworkers=dask_nworkers,
         )
         da_dict["values"][one_exp[1]] = da_point
 
     # plot the time series
     plot_ts_multiple(da_dict, domain=lonlat)
+
+    if dask_nworkers is not None:
+        stop_dask_cluster(cluster, client)
 
 
 @main.command()
@@ -334,10 +342,11 @@ def histograms(
     """Read data for a variable from GRIB file(s) and plot the values distribution."""
     # check dask setup
     chunks = None
-    if "pp" in os.uname().nodename:
+    if dask_nworkers and "pp" in os.uname().nodename:
         logging.info("job is running on %s, dask_nworkers active", os.uname().nodename)
         logging.info("number of dask workers: %d", dask_nworkers)
         chunks = {"generalVerticalLayer": 1}
+        cluster, client = start_dask_cluster(dask_nworkers)
     elif dask_nworkers and "pp" not in os.uname().nodename:
         logging.warning(
             "job is running on %s, dask_nworkers not active", os.uname().nodename
@@ -361,7 +370,6 @@ def histograms(
             domain=domain,
             deagg=deagg,
             chunks=chunks,
-            dask_nworkers=dask_nworkers,
         )
         da_dict[one_exp[1]] = da_masked.copy()
 
@@ -375,6 +383,9 @@ def histograms(
         xlog=xlog,
         ylog=ylog,
     )
+
+    if dask_nworkers is not None:
+        stop_dask_cluster(cluster, client)
 
 
 @main.command()
@@ -430,15 +441,16 @@ def time_avg(
         )
         logging.warning("send your job on a post-proc node to activate dask_nworkers")
         dask_nworkers = None
-    elif "ln" not in os.uname().nodename:
+    elif dask_nworkers and "ln" not in os.uname().nodename:
         logging.info("job is running on %s, dask_nworkers active", os.uname().nodename)
         logging.info("number of dask workers: %d", dask_nworkers)
         chunks = {"generalVerticalLayer": 1}
+        cluster, client = start_dask_cluster(dask_nworkers)
 
     # get grid
     gd = get_grid(gridfile)
     # check compatibility of grid and data
-    check_grid(filelist, gd, varname, level, chunks=chunks, dask_nworkers=dask_nworkers)
+    check_grid(filelist, gd, varname, level, chunks=chunks)
 
     # gather data
     if len(filelist) == 0:
@@ -452,7 +464,6 @@ def time_avg(
         level,
         deagg=deagg,
         chunks=chunks,
-        dask_nworkers=dask_nworkers,
     )
     # pylint: enable=duplicate-code
 
@@ -490,6 +501,9 @@ def time_avg(
         title=title,
         save=True,
     )
+
+    if dask_nworkers is not None:
+        stop_dask_cluster(cluster, client)
 
 
 @main.command()
