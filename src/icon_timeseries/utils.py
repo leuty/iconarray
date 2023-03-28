@@ -2,6 +2,7 @@
 # Standard library
 import logging
 import sys
+from datetime import datetime
 from typing import Dict
 from typing import List
 from typing import Tuple
@@ -158,3 +159,11 @@ def check_grid(
 
 
 # pylint: enable=too-many-arguments, duplicate-code
+
+
+def datetime64_to_hourlystr(date: np.datetime64) -> str:
+    """Convert a datetime64 object to a string with YYYY.MM.DD HH UTC."""
+    # datetime cannot handle nanosecond precision and seconds are enough here
+    datetime_date = date.astype("datetime64[s]").astype(datetime)
+    date_string = datetime_date.strftime("%Y.%m.%d %HUTC")
+    return date_string

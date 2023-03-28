@@ -24,6 +24,7 @@ from .prepare_data import prepare_meanmax
 from .prepare_data import prepare_nn
 from .prepare_data import prepare_time_avg
 from .utils import check_grid
+from .utils import datetime64_to_hourlystr as dt2str
 
 logging.getLogger(__name__)
 log_format = "%(levelname)8s: %(message)s [%(filename)s:%(lineno)s - %(funcName)s()]"
@@ -437,9 +438,7 @@ def time_avg(
     # get grid
     gd = get_grid(gridfile)
     # check compatibility of grid and data
-    check_grid(
-        filelist, gd, varname, level, chunks=chunks, dask_nworkers=dask_nworkers
-    )
+    check_grid(filelist, gd, varname, level, chunks=chunks, dask_nworkers=dask_nworkers)
 
     # gather data
     if len(filelist) == 0:
@@ -480,7 +479,11 @@ def time_avg(
     title = f"{da.name} ({da.GRIB_stepType}, {da.GRIB_units})"
     if hasattr(da, "level"):
         title += f", level {da.level}"
-    title += f"\n average interval: {str(da.avg_timerange[0])[:13]} - {str(da.avg_timerange[1])[:13]}"
+    title += (
+        f"\n average interval: {dt2str(da.avg_timerange[0])} - "
+        f"{dt2str(da.avg_timerange[1])}"
+    )
+
     _, _ = plot_onmap(
         da,
         gd,
