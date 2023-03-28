@@ -134,7 +134,7 @@ def var_from_files(
     }
 
     # setup the dask cluster if requested
-    if dask_nworkers:
+    if dask_nworkers is not None:
         cluster = LocalCluster()
         cluster.scale(dask_nworkers)
         client = Client(cluster)
