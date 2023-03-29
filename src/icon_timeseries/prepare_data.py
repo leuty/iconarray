@@ -86,7 +86,7 @@ def prepare_time_avg(
     level: float | None = None,
     deagg: bool = False,
     chunks: Dict[str, int] | None = None,
-) -> xr.DataArray:
+) -> xr.Dataset:
     """Get the temporal average (dim: valid_time) of a model quantity.
 
     Parameters
@@ -105,8 +105,8 @@ def prepare_time_avg(
 
     Returns
     -------
-    da_mean : xarray.DataArray
-        temporal average
+    ds_mean : xarray.Dataset
+        temporal average, information is encoded as cell_methods (CF conventions)
 
     """
     # read the data
@@ -126,9 +126,19 @@ def prepare_time_avg(
             f"This function does not yet support data on a "
             f"{da.attrs['GRIB_gridType']} grid"
         )
-    da_mean.attrs["avg_timerange"] = (da.valid_time.values[0], da.valid_time.values[-1])
+    # convert to xarray.Dataset
+    # add information on the averaging period (CF conventions)
+    ds_mean = da_mean.to_dataset()
+    ds_mean = ds_mean.assign_coords(
+        time=("time", [da.valid_time.values[-1]]),
+        time_bnds=(
+            ("time", "bnds"),
+            [[da.valid_time.values[0], da.valid_time.values[-1]]],
+        ),
+    )
+    ds_mean[varname].attrs.update(cell_methods="time: mean")
 
-    return da_mean
+    return ds_mean
 
 
 # pylint: enable=too-many-arguments

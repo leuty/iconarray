@@ -426,7 +426,7 @@ def time_avg(
         sys.exit()
 
     # pylint: disable=duplicate-code
-    da = prepare_time_avg(
+    ds = prepare_time_avg(
         filelist,
         varname,
         level,
@@ -436,35 +436,37 @@ def time_avg(
     # pylint: enable=duplicate-code
 
     # check dimensions
-    if ("values" in da.dims) and (len(da.dims) != 1):
+    if ("values" in ds[varname].dims) and (len(ds[varname].dims) != 1):
         logging.error(
             "The data has the wrong dimensions: %s. Please provide a level to "
             "reduce the dimensionality to 'values' only",
-            da.dims,
+            ds[varname].dims,
         )
         raise ValueError("Dimensions of data for time-avg must be 'values' only.")
-    if "values" not in da.dims:
+    if "values" not in ds[varname].dims:
         logging.error(
             "The data has the dimensions: %s. It must have 'values' only. If %s "
             "is a horizontal dimension, support must be implemented for that grid.",
-            da.dims,
-            da.dims,
+            ds[varname].dims,
+            ds[varname].dims,
         )
         raise NotImplementedError(
-            f"Horizontal dimensions {da.dims} is not yet supported."
+            f"Horizontal dimensions {ds[varname].dims} is not yet supported."
         )
 
     # plot the field
-    title = f"{da.name} ({da.GRIB_stepType}, {da.GRIB_units})"
-    if hasattr(da, "level"):
-        title += f", level {da.level}"
+    title = (
+        f"{ds[varname].name} ({ds[varname].GRIB_stepType}, {ds[varname].GRIB_units})"
+    )
+    if hasattr(ds[varname], "level"):
+        title += f", level {ds[varname].level}"
     title += (
-        f"\n average interval: {dt2str(da.avg_timerange[0])} - "
-        f"{dt2str(da.avg_timerange[1])}"
+        f"\n average interval: {dt2str(ds.time_bnds.values[0,0])} - "
+        f"{dt2str(ds.time_bnds.values[0,1])}"
     )
 
     _, _ = plot_on_map(
-        da,
+        ds[varname],
         gd,
         title=title,
         save=True,

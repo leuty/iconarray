@@ -254,14 +254,14 @@ def test_ts_nn_multi():
 def test_time_avg_plot():
     """Test plotting a temporal average on a map."""
     filelist = glob.glob(exp_s)
-    da = prepare_time_avg(
+    ds = prepare_time_avg(
         filelist,
         "T",
         1,
     )
     gd = get_grid(gdf)
     _, _ = plot_on_map(
-        da,
+        ds["T"],
         gd,
         save=False,
     )
