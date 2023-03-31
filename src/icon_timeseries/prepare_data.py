@@ -181,6 +181,9 @@ def prepare_nn(
 
     """
     # get grid
+    # this reads the grid if a grid file is specified even though the data might
+    # be on a rotated latlon grid (no need for a grid file). this is not ideal,
+    # but check_grid just does nothing then.
     if gridfile:
         gd = get_grid(gridfile)
         # check compatibility of grid and data
@@ -196,12 +199,17 @@ def prepare_nn(
     )
 
     lon, lat = parse_coords(lonlat)
-    if "gd" in locals():  # unstructured grid
+    if da.attrs["GRIB_gridType"] == "unstructured_grid":  # unstructured grid
         index = ind_from_nn(gd.cx, gd.cy, lon, lat)
         da_nn = da.isel({"values": index})
-    else:  # rotated pole
+    elif da.attrs["GRIB_gridType"] == "rotated_ll":  # rotated pole
         x, y = nearest_xy(da.longitude.values, da.latitude.values, lon, lat)
         da_nn = da.isel(y=y, x=x)
+    else:
+        raise NotImplementedError(
+            "Nearest neighbour time series are only implemented for data on the "
+            "following type of grids: unstructured_grid and rotated_ll."
+        )
     return da_nn
 
 

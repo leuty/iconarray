@@ -36,6 +36,11 @@ exp_1_ensday = os.path.join(test_exps, "ICON-CH1-EPS", "*", "lfff001[1-6]0000")
 exp_2_ensday = os.path.join(test_exps, "ICON-CH2-EPS", "*", "lfff001[1-6]0000")
 
 # saved values, reference results
+# update the reference with:
+#   import pickle
+#   f = open(pickle_file_name, "wb")
+#   pickle.dump(data, f)
+#   f.close()
 with open(os.path.join(test_single, "test_mean.pckl"), "rb") as f:
     test_mean = pickle.load(f)
 with open(os.path.join(test_single, "test_max.pckl"), "rb") as f:
