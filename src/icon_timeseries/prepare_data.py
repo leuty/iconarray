@@ -1,5 +1,6 @@
 """Data pre-processing for visualisation."""
 # Standard library
+import logging
 from typing import Dict
 from typing import List
 from typing import Tuple
@@ -200,6 +201,13 @@ def prepare_nn(
 
     lon, lat = parse_coords(lonlat)
     if da.attrs["GRIB_gridType"] == "unstructured_grid":  # unstructured grid
+        if "gd" not in locals():
+            logging.error(
+                "grid object gd not found: please specify a grid, it is needed "
+                "since you data grid is %s",
+                da.attrs["GRIB_gridType"],
+            )
+            raise NameError("grid object gd not defines but needed.")
         index = ind_from_nn(gd.cx, gd.cy, lon, lat)
         da_nn = da.isel({"values": index})
     elif da.attrs["GRIB_gridType"] == "rotated_ll":  # rotated pole
@@ -252,11 +260,13 @@ def prepare_masked_da(
         masked DataArray
 
     """
-    # get domain
-    if gridfile:
-        gd = get_grid(gridfile)
-    # check compatibility of grid, domain and data
+    # get grid
+    # this reads the grid if a grid file is specified even though the data might
+    # be on a rotated latlon grid (no need for a grid file). this is not ideal,
+    # but check_grid just does nothing then.
     if domain != "all" and gridfile:
+        gd = get_grid(gridfile)
+        # check compatibility of grid and data
         check_grid(filelist, gd, varname, level, chunks=chunks)
 
     # read the data
@@ -269,10 +279,24 @@ def prepare_masked_da(
     )
 
     # apply domain mask if domain is set
-    if domain != "all" and "gd" in locals():
-        da = mask_domain(da, domain, gd)
-    elif domain != "all" and "gd" not in locals():
-        da = mask_domain(da, domain)
+    if domain != "all":
+        if da.attrs["GRIB_gridType"] == "unstructured_grid":  # unstructured grid
+            if "gd" not in locals():
+                logging.error(
+                    "grid object gd not found: please specify a grid, it is needed "
+                    "since you data grid is %s",
+                    da.attrs["GRIB_gridType"],
+                )
+                raise NameError("grid object gd not defines but needed.")
+
+            da = mask_domain(da, domain, gd)
+        elif da.attrs["GRIB_gridType"] == "rotated_ll":  # rotated pole
+            da = mask_domain(da, domain)
+        else:
+            raise NotImplementedError(
+                "Masking of a domain is only implemented for data on the "
+                "following type of grids: unstructured_grid and rotated_ll."
+            )
 
     return da
 
