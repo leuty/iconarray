@@ -207,3 +207,10 @@ def stop_dask_cluster(
     if cluster:
         cluster.close()
         logging.info("Dask cluster stopped!")
+
+
+def check_and_fix_fname(fname: str):
+    """Make sure the string ends with .png."""
+    if not fname.endswith(".png"):
+        fname += ".png"
+    return fname
