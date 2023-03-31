@@ -2,7 +2,6 @@
 # Standard library
 import glob
 import logging
-import os
 import sys
 from typing import Dict
 from typing import Tuple
@@ -17,10 +16,16 @@ from .handle_grid import get_domain
 from .handle_grid import get_grid
 from .plot import plot_domain
 from .plot import plot_histograms
+from .plot import plot_on_map
 from .plot import plot_ts_multiple
 from .prepare_data import prepare_masked_da
 from .prepare_data import prepare_meanmax
 from .prepare_data import prepare_nn
+from .prepare_data import prepare_time_avg
+from .utils import check_grid
+from .utils import datetime64_to_hourlystr as dt2str
+from .utils import start_dask_cluster
+from .utils import stop_dask_cluster
 
 logging.getLogger(__name__)
 log_format = "%(levelname)8s: %(message)s [%(filename)s:%(lineno)s - %(funcName)s()]"
@@ -112,20 +117,14 @@ def meanmax(
     domain: str,
     deagg: bool,
     dask_nworkers: int | None,
-):  # pylint: disable=too-many-arguments
+):  # pylint: disable=too-many-arguments, too-many-locals
     """Read data for a variable from GRIB file(s) and plot a domain average and max."""
-    # check dask setup
-    chunks = None
-    if dask_nworkers and "ln" in os.uname().nodename:
-        logging.warning(
-            "job is running on %s, dask_nworkers are deactivated", os.uname().nodename
-        )
-        logging.warning("send your job on a post-proc node to activate dask_nworkers")
-        dask_nworkers = None
-    elif "ln" not in os.uname().nodename:
-        logging.info("job is running on %s, dask_nworkers active", os.uname().nodename)
-        logging.info("number of dask workers: %d", dask_nworkers)
+    # dask setup
+    cluster, client = start_dask_cluster(dask_nworkers)
+    if cluster:
         chunks = {"generalVerticalLayer": 1}
+    else:
+        chunks = None
 
     # gather data for all experiments
     da_dict: Dict[str, Dict[str, xr.DataArray]] = {"mean": {}, "max": {}}
@@ -142,7 +141,6 @@ def meanmax(
             domain=domain,
             deagg=deagg,
             chunks=chunks,
-            dask_nworkers=dask_nworkers,
         )
         da_dict["mean"][one_exp[1]] = da_mean
         da_dict["max"][one_exp[1]] = da_max
@@ -154,6 +152,8 @@ def meanmax(
 
     # plot the time series
     plot_ts_multiple(da_dict, domain=domain)
+
+    stop_dask_cluster(cluster, client)
 
 
 @main.command()
@@ -207,18 +207,12 @@ def nearest_neighbour(
     dask_nworkers: int | None,
 ):  # pylint: disable=too-many-arguments
     """Plot a time series from GRIB data for given variables and coordinates."""
-    # check dask setup
-    chunks = None
-    if "pp" in os.uname().nodename:
-        logging.info("job is running on %s, dask_nworkers active", os.uname().nodename)
-        logging.info("number of dask workers: %d", dask_nworkers)
+    # dask setup
+    cluster, client = start_dask_cluster(dask_nworkers)
+    if cluster:
         chunks = {"generalVerticalLayer": 1}
-    elif dask_nworkers and "pp" not in os.uname().nodename:
-        logging.warning(
-            "job is running on %s, dask_nworkers not active", os.uname().nodename
-        )
-        logging.warning("send your job on a post-proc node to activate dask_nworkers")
-        dask_nworkers = None
+    else:
+        chunks = None
 
     # gather data for all experiments
     da_dict: Dict[str, Dict[str, xr.DataArray]] = {"values": {}}
@@ -235,12 +229,13 @@ def nearest_neighbour(
             gridfile,
             deagg=deagg,
             chunks=chunks,
-            dask_nworkers=dask_nworkers,
         )
         da_dict["values"][one_exp[1]] = da_point
 
     # plot the time series
     plot_ts_multiple(da_dict, domain=lonlat)
+
+    stop_dask_cluster(cluster, client)
 
 
 @main.command()
@@ -328,18 +323,12 @@ def histograms(
     dask_nworkers: int | None,
 ):  # pylint: disable=too-many-arguments, too-many-locals
     """Read data for a variable from GRIB file(s) and plot the values distribution."""
-    # check dask setup
-    chunks = None
-    if "pp" in os.uname().nodename:
-        logging.info("job is running on %s, dask_nworkers active", os.uname().nodename)
-        logging.info("number of dask workers: %d", dask_nworkers)
+    # dask setup
+    cluster, client = start_dask_cluster(dask_nworkers)
+    if cluster:
         chunks = {"generalVerticalLayer": 1}
-    elif dask_nworkers and "pp" not in os.uname().nodename:
-        logging.warning(
-            "job is running on %s, dask_nworkers not active", os.uname().nodename
-        )
-        logging.warning("send your job on a post-proc node to activate dask_nworkers")
-        dask_nworkers = None
+    else:
+        chunks = None
 
     # gather data for all experiments
     da_dict = {}  # type: Dict[str, xr.DataArray]
@@ -357,7 +346,6 @@ def histograms(
             domain=domain,
             deagg=deagg,
             chunks=chunks,
-            dask_nworkers=dask_nworkers,
         )
         da_dict[one_exp[1]] = da_masked.copy()
 
@@ -371,6 +359,120 @@ def histograms(
         xlog=xlog,
         ylog=ylog,
     )
+
+    stop_dask_cluster(cluster, client)
+
+
+@main.command()
+@click.option(
+    "--exp",
+    required=True,
+    type=(str, str),
+    nargs=2,
+    multiple=False,
+    help=(
+        "experiment info. file pattern to files to read, will be expanded to a "
+        "list with glob.glob, and experiment identifier"
+    ),
+)
+@click.option(
+    "--varname", required=True, type=str, help="GRIB shortName of the variable"
+)
+@click.option("--level", default=None, type=float, help="model level value")
+@click.option(
+    "--gridfile",
+    required=True,
+    type=str,
+    help="ICON grid file, needed for unstructured grid",
+)
+@click.option(
+    "--deagg",
+    is_flag=True,
+    help="deagreggation of variable, method is detected from GRIB encoding "
+    "(de-averaging and de-accumulation are currently implemented)",
+)
+@click.option(
+    "--dask-workers",
+    "dask_nworkers",
+    default=None,
+    type=int,
+    help="ignored if the script does not run on a post-proc node",
+)
+def time_avg(
+    exp: Tuple[str, str],
+    varname: str,
+    level: float | None,
+    gridfile: str,
+    deagg: bool,
+    dask_nworkers: int | None,
+):  # pylint: disable=too-many-arguments,
+    """Read data for variable from GRIB file(s) and plot temporally averaged field."""
+    filelist = glob.glob(exp[0])
+    # dask setup
+    cluster, client = start_dask_cluster(dask_nworkers)
+    if cluster:
+        chunks = {"generalVerticalLayer": 1}
+    else:
+        chunks = None
+
+    # get grid
+    gd = get_grid(gridfile)
+    # check compatibility of grid and data
+    check_grid(filelist, gd, varname, level, chunks=chunks)
+
+    # gather data
+    if len(filelist) == 0:
+        logging.warning("file list for %s is empty, nothing to do...")
+        sys.exit()
+
+    # pylint: disable=duplicate-code
+    ds = prepare_time_avg(
+        filelist,
+        varname,
+        level,
+        deagg=deagg,
+        chunks=chunks,
+    )
+    # pylint: enable=duplicate-code
+
+    # check dimensions
+    if ("values" in ds[varname].dims) and (len(ds[varname].dims) != 1):
+        logging.error(
+            "The data has the wrong dimensions: %s. Please provide a level to "
+            "reduce the dimensionality to 'values' only",
+            ds[varname].dims,
+        )
+        raise ValueError("Dimensions of data for time-avg must be 'values' only.")
+    if "values" not in ds[varname].dims:
+        logging.error(
+            "The data has the dimensions: %s. It must have 'values' only. If %s "
+            "is a horizontal dimension, support must be implemented for that grid.",
+            ds[varname].dims,
+            ds[varname].dims,
+        )
+        raise NotImplementedError(
+            f"Horizontal dimensions {ds[varname].dims} is not yet supported."
+        )
+
+    # plot the field
+    title = (
+        f"{ds[varname].name} ({ds[varname].GRIB_stepType}, {ds[varname].GRIB_units})"
+    )
+    if hasattr(ds[varname], "level"):
+        title += f", level {ds[varname].level}"
+    title += (
+        f"\n average interval: {dt2str(ds.time_bnds.values[0,0])} - "
+        f"{dt2str(ds.time_bnds.values[0,1])}"
+    )
+
+    _, _ = plot_on_map(
+        ds[varname],
+        gd,
+        title=title,
+        save=True,
+    )
+
+    stop_dask_cluster(cluster, client)
 
 
 @main.command()

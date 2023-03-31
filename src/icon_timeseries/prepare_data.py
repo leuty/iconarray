@@ -26,7 +26,6 @@ def prepare_meanmax(
     domain: str = "all",
     deagg: bool = False,
     chunks: Dict[str, int] | None = None,
-    dask_nworkers: int | None = None,
 ) -> Tuple[xr.DataArray, xr.DataArray]:
     """Get the domain average and domain maximum of a model quantity.
 
@@ -47,8 +46,6 @@ def prepare_meanmax(
         available
     chunks : Dict(str, int), optional
         chunk size for each dimension to be loaded.
-    dask_nworkers : int, optional
-        if set, data reading is done in parallel using dask_nworkers workers
 
     Returns
     -------
@@ -66,7 +63,6 @@ def prepare_meanmax(
         domain,
         deagg,
         chunks,
-        dask_nworkers,
     )
 
     # compute average and maximum
@@ -83,6 +79,71 @@ def prepare_meanmax(
 # pylint: enable=too-many-arguments
 
 
+# pylint: disable=too-many-arguments
+def prepare_time_avg(
+    filelist: List[str],
+    varname: str,
+    level: float | None = None,
+    deagg: bool = False,
+    chunks: Dict[str, int] | None = None,
+) -> xr.Dataset:
+    """Get the temporal average (dim: valid_time) of a model quantity.
+
+    Parameters
+    ----------
+    filelist : list(str)
+        list of files to read
+    varname : str
+        GRIB shortName of variable to extract
+    level : float
+        model level value
+    deagg : bool
+        Deaggregation of variable, de-averaging and de-accumulation are currently
+        available
+    chunks : Dict(str, int), optional
+        chunk size for each dimension to be loaded.
+
+    Returns
+    -------
+    ds_mean : xarray.Dataset
+        temporal average, information is encoded as cell_methods (CF conventions)
+
+    """
+    # read the data
+    da = get_var(
+        filelist,
+        varname,
+        level,
+        deagg=deagg,
+        chunks=chunks,
+    )
+
+    # compute average and maximum
+    if da.attrs["GRIB_gridType"] == "unstructured_grid":
+        da_mean = da.mean(dim="valid_time", skipna=True).compute()
+    else:
+        raise NotImplementedError(
+            f"This function does not yet support data on a "
+            f"{da.attrs['GRIB_gridType']} grid"
+        )
+    # convert to xarray.Dataset
+    # add information on the averaging period (CF conventions)
+    ds_mean = da_mean.to_dataset()
+    ds_mean = ds_mean.assign_coords(
+        time=("time", [da.valid_time.values[-1]]),
+        time_bnds=(
+            ("time", "bnds"),
+            [[da.valid_time.values[0], da.valid_time.values[-1]]],
+        ),
+    )
+    ds_mean[varname].attrs.update(cell_methods="time: mean")
+
+    return ds_mean
+
+
+# pylint: enable=too-many-arguments
+
+
 # pylint: disable=too-many-arguments, too-many-locals
 def prepare_nn(
     filelist: List[str],
@@ -92,7 +153,6 @@ def prepare_nn(
     gridfile: str | None = None,
     deagg: bool = False,
     chunks: Dict[str, int] | None = None,
-    dask_nworkers: int | None = None,
 ) -> xr.DataArray:
     """Get the domain average and domain maximum of a model quantity.
 
@@ -113,8 +173,6 @@ def prepare_nn(
         available
     chunks : Dict(str, int), optional
         chunk size for each dimension to be loaded.
-    dask_nworkers : int, optional
-        if set, data reading is done in parallel using dask_nworkers workers
 
     Returns
     -------
@@ -126,9 +184,7 @@ def prepare_nn(
     if gridfile:
         gd = get_grid(gridfile)
         # check compatibility of grid and data
-        check_grid(
-            filelist, gd, varname, level, chunks=chunks, dask_nworkers=dask_nworkers
-        )
+        check_grid(filelist, gd, varname, level, chunks=chunks)
 
     # read the data
     da = get_var(
@@ -137,7 +193,6 @@ def prepare_nn(
         level,
         deagg=deagg,
         chunks=chunks,
-        dask_nworkers=dask_nworkers,
     )
 
     lon, lat = parse_coords(lonlat)
@@ -162,7 +217,6 @@ def prepare_masked_da(
     domain: str = "all",
     deagg: bool = False,
     chunks: Dict[str, int] | None = None,
-    dask_nworkers: int | None = None,
 ) -> xr.DataArray:
     """Get a (domain) masked DataArray of a model quantity.
 
@@ -183,8 +237,6 @@ def prepare_masked_da(
         available
     chunks : Dict(str, int), optional
         chunk size for each dimension to be loaded.
-    dask_nworkers : int, optional
-        if set, data reading is done in parallel using dask_nworkers workers
 
     Returns
     -------
@@ -197,9 +249,7 @@ def prepare_masked_da(
         gd = get_grid(gridfile)
     # check compatibility of grid, domain and data
     if domain != "all" and gridfile:
-        check_grid(
-            filelist, gd, varname, level, chunks=chunks, dask_nworkers=dask_nworkers
-        )
+        check_grid(filelist, gd, varname, level, chunks=chunks)
 
     # read the data
     da = get_var(
@@ -208,7 +258,6 @@ def prepare_masked_da(
         level,
         deagg=deagg,
         chunks=chunks,
-        dask_nworkers=dask_nworkers,
     )
 
     # apply domain mask if domain is set

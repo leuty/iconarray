@@ -12,9 +12,6 @@ from typing import Mapping
 # Third-party
 import numpy as np
 import xarray as xr
-from dask.distributed import Client
-from dask.distributed import LocalCluster
-from dask.distributed import performance_report
 
 # Local
 from .deaggregate import deaggregate
@@ -30,7 +27,6 @@ def get_var(
     level: float | None = None,
     deagg: bool = False,
     chunks: Dict[str, int] | None = None,
-    dask_nworkers: int | None = None,
 ) -> xr.DataArray:
     """Get a DataArray of a model quantity, deaggregate if required.
 
@@ -47,8 +43,6 @@ def get_var(
         available
     chunks : Dict(str, int), optional
         chunk size for each dimension to be loaded.
-    dask_nworkers : int, optional
-        if set, data reading is done in parallel using dask_nworkers workers
 
     Returns
     -------
@@ -64,7 +58,6 @@ def get_var(
         level,
         parallel=True,
         chunks=chunks,
-        dask_nworkers=dask_nworkers,
     )
     tend = time.perf_counter()
     telapsed = tend - tstart
@@ -89,7 +82,6 @@ def var_from_files(
     level: float | None = None,
     parallel: bool = False,
     chunks: Dict[str, int] | None = None,
-    dask_nworkers: int | None = None,
 ) -> xr.DataArray:
     """Read a variable from GRIB file(s) into an xarray.DataArray.
 
@@ -105,8 +97,6 @@ def var_from_files(
         parallelise the reading with dask.
     chunks : Dict(str, int), optional
         chunk size for each dimension to be loaded.
-    dask_nworkers : int, optional
-        if set, data reading is done in parallel using dask_nworkers workers
 
     Returns
     -------
@@ -133,31 +123,12 @@ def var_from_files(
         "encode_cf": ("time", "geography", "vertical"),
     }
 
-    # setup the dask cluster if requested
-    if dask_nworkers:
-        cluster = LocalCluster()
-        cluster.scale(dask_nworkers)
-        client = Client(cluster)
-
-        u_id = time.time()
-        dask_report = f"dask-report-{u_id}.html"
-        logging.info(
-            "dask report is being prepared: %s, %s", dask_report, client.dashboard_link
-        )
-
-        with performance_report(filename=dask_report):
-            ds = _open_icondataset(
-                filelist,
-                parallel=parallel,
-                **kwargs,
-            )
-
-    else:
-        ds = _open_icondataset(
-            filelist,
-            parallel=parallel,
-            **kwargs,
-        )
+    # open the datasets
+    ds = _open_icondataset(
+        filelist,
+        parallel=parallel,
+        **kwargs,
+    )
 
     # selection
     try:
@@ -169,7 +140,7 @@ def var_from_files(
             varname,
         )
         sys.exit()
-    if level:
+    if level is not None:
         try:
             da = da.sel({da.GRIB_typeOfLevel: level}, method="nearest", tolerance=1e-09)
             da.attrs["level"] = level

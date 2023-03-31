@@ -12,6 +12,7 @@ import matplotlib.dates as mdates  # type: ignore
 import matplotlib.pyplot as plt  # type: ignore
 import numpy as np
 import xarray as xr
+from cartopy.crs import PlateCarree  # type: ignore
 
 # Local
 from .handle_grid import IconGrid
@@ -84,16 +85,13 @@ def plot_ts_multiple(
             exp_count += 1
 
         # set title and legend
-        try:
-            axs[i].set_title(
-                f"{e_val.name} {p_key} ({e_val.GRIB_stepType}, {e_val.GRIB_units}) "
-                f"for {domain}, level {e_val.level}"
-            )
-        except AttributeError:
-            axs[i].set_title(
-                f"{e_val.name} {p_key} ({e_val.GRIB_stepType}, {e_val.GRIB_units}) "
-                f"for {domain}"
-            )
+        title = (
+            f"{e_val.name} {p_key} ({e_val.GRIB_stepType}, {e_val.GRIB_units}) "
+            f"for {domain}"
+        )
+        if hasattr(e_val, "level"):
+            title += f", level {e_val.level}"
+        axs[i].set_title(title)
         axs[i].legend()
 
     for idx, ax in np.ndenumerate(axs):
@@ -101,12 +99,10 @@ def plot_ts_multiple(
             ax.xaxis.set_ticklabels([])
 
     if save:
-        try:
-            fname = (
-                f"timeseries_{e_val.name}_{'-'.join(da_dict.keys())}_l{e_val.level}.png"
-            )
-        except AttributeError:
-            fname = f"timeseries_{e_val.name}_{'-'.join(da_dict.keys())}.png"
+        fname = f"timeseries_{e_val.name}_{'-'.join(da_dict.keys())}"
+        if hasattr(e_val, "level"):
+            fname += f"_l{e_val.level}"
+        fname += ".png"
         plt.savefig(fname, bbox_inches="tight", dpi=300)
         logging.info("saved figure %s", fname)
 
@@ -161,7 +157,7 @@ def plot_ts(
     ax.plot(times, data, **kwargs)
 
     # set the title
-    if title:
+    if title is not None:
         ax.set_title(title)
     else:
         ax.set_title("data time series")
@@ -237,13 +233,6 @@ def plot_domain(
     save: bool = False,
 ) -> matplotlib.figure.Figure:
     """Plot a quicklook of the domain, excluding masked regions."""
-    # Third-party
-    # pylint: disable=import-outside-toplevel
-    from cartopy.crs import PlateCarree  # type: ignore
-    from cartopy.feature import NaturalEarthFeature  # type: ignore
-
-    # pylint: enable=import-outside-toplevel
-
     if ax:
         fig = ax.get_figure()
     else:
@@ -261,14 +250,130 @@ def plot_domain(
         cy = gd.cy
     vals = np.ones(cy.size)
     vals[0] = 10.0  # tricontourf does not work when all values are equal
-    ax.tricontourf(cx, cy, vals, transform=PlateCarree(), alpha=0.5)
+
+    # plot the data
+    ax, _ = _plot_map(
+        cx, cy, vals, ax, transform=PlateCarree(), alpha=0.5, colormap=False
+    )
+
+    # add title
+    ax.set_title(f"domain: {domain_name}")
+
+    # save the figure
+    if save:
+        fname = f"domain_{domain_name.replace(' ', '')}.png"
+        plt.savefig(fname, dpi=300)
+        logging.info("saved figure %s", fname)
+
+    return fig
+
+
+def plot_on_map(
+    data: xr.DataArray,
+    gd: IconGrid,
+    ax: matplotlib.axes.Axes | None = None,
+    title: str | None = None,
+    save: bool = False,
+) -> tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
+    """Plot data on a map.
+
+    Parameters
+    ----------
+    data : xr.DataArray
+        data, only dimension has to be "values"
+    gd : IconGrid
+        grid object
+    ax : matplotlib.axes.Axes, optional
+        axes to use
+    title : str, optional
+        ax title, a default title will be generated from the data if no title is
+        provided
+    save : bool, optional
+        save the figure
+
+    Returns
+    -------
+    fig : matplotlib.figure.Figure
+        figure object
+    ax : matplotlib.axes.Axes
+        axes object
+
+    """
+    if ax:
+        fig = ax.get_figure()
+    else:
+        fig, ax = plt.subplots(subplot_kw={"projection": PlateCarree()})
+
+    # plot the data
+    ax, _ = _plot_map(gd.cx, gd.cy, data.values, ax, transform=PlateCarree())
+
+    # set title and legend
+    if title is None:
+        title = f"{data.name} ({data.GRIB_stepType}, {data.GRIB_units})"
+        if hasattr(data, "level"):
+            title += f", level {data.level}"
+    ax.set_title(title)
+
+    # save the figure
+    if save:
+        fname = f"map_{data.name}"
+        if hasattr(data, "level"):
+            fname += f"_l{data.level}"
+        fname += ".png"
+        plt.savefig(fname, bbox_inches="tight", dpi=300)
+        logging.info("saved figure %s", fname)
+
+    return fig, ax
+
+
+def _plot_map(
+    cx: np.ndarray,
+    cy: np.ndarray,
+    vals: np.ndarray,
+    ax: matplotlib.axes.Axes,
+    colormap: bool | None = True,
+    **kwargs,
+) -> tuple[matplotlib.axes.Axes, matplotlib.colorbar.Colorbar | None]:
+    """Wrap tricontourf with map background.
+
+    Parameters
+    ----------
+    cx, cy : array-like
+        x and y coordinates of the data
+    vals : zarray-like
+        height values over which the contour is drawn
+    ax : matplotlib.axes.Axes
+        axes object
+    colormap : bool, optional
+        draw a colormap
+    kwargs
+        keyword arguments to matplotlib.pyplot.tricontourf()
+
+    Returns
+    -------
+    ax :  matplotlib.axes.Axes
+        axes object
+    cbar : matplotlib.colorbar.Colorbar
+        colorbar object
+
+    """
+    # Third-party
+    # pylint: disable=import-outside-toplevel
+    from cartopy.feature import NaturalEarthFeature  # type: ignore
+
+    # pylint: enable=import-outside-toplevel
+    # plot the data
+    im = ax.tricontourf(cx, cy, vals, **kwargs)
+    cbar = None
+    if colormap:
+        cbar = plt.colorbar(im, shrink=0.5)
 
     # set ticklabels, suppress gridlines, set axes limits
     gl = ax.gridlines(draw_labels=True, linewidth=0)
     gl.top_labels = False
     gl.right_labels = False
-    ax.set_xlim(gd.cx.min(), gd.cx.max())
-    ax.set_ylim(gd.cy.min(), gd.cy.max())
+    ax.set_xlim(cx.min(), cx.max())
+    ax.set_ylim(cy.min(), cy.max())
 
     # add borders and coasts
     ax.coastlines(resolution="10m", color="black")
@@ -277,17 +382,7 @@ def plot_domain(
         edgecolor="black",
         facecolor="none",
     )
-
-    # add title
-    ax.set_title(f"domain: {domain_name}")
-
-    # save the figute
-    if save:
-        fname = f"domain_{domain_name.replace(' ', '')}.png"
-        plt.savefig(fname, dpi=300)
-        logging.info("saved figure %s", fname)
-
-    return fig
+    return ax, cbar
 
 
 # pylint: disable=too-many-arguments, too-many-locals
@@ -376,18 +471,16 @@ def plot_histograms(
     if ylog:
         ax.set_yscale("log")
 
-    try:
-        fig.suptitle(f"Histogram plots for domain {domain}, level {e_val.level}")
-    except AttributeError:
-        fig.suptitle(f"Histogram plots for domain {domain}")
+    title = f"Histogram plots for domain {domain}"
+    if hasattr(e_val, "level"):
+        title += f", level {e_val.level}"
+    fig.suptitle(title)
 
     if save:
-        try:
-            fname = (
-                f"histograms_{e_val.name}_{'-'.join(da_dict.keys())}_l{e_val.level}.png"
-            )
-        except AttributeError:
-            fname = f"histograms_{e_val.name}_{'-'.join(da_dict.keys())}.png"
+        fname = f"histograms_{e_val.name}_{'-'.join(da_dict.keys())}"
+        if hasattr(e_val, "level"):
+            fname += f"_l{e_val.level}"
+        fname += ".png"
         # fig.set_size_inches(4.0, 8.0)
         fig.savefig(fname, dpi=300)
         logging.info("saved figure %s", fname)

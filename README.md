@@ -1,10 +1,11 @@
 # ICON time series
 Visualise time series of ICON data.
 
-<img src="images/example.png" width="300">
+<img src="images/example_1.png" width="300">
+<img src="images/example_2.png" width="300">
+<img src="images/example_3.png" width="300">
 
-
-This package provides functionalities to display time series from ICON output files. It handles GRIB input (necdf support is currently being developed) on the native. The package should actually also support COSMO data and data on a regular rotated pole grid, but this is features are less tested and might be buggy.
+This package provides functionalities to display time series (and more ;)...) from ICON output files. It handles GRIB input (necdf support is currently being developed) on the native. The package should actually also support COSMO data and data on a regular rotated pole grid, but these features are less tested and might be buggy.
 
 ## Quick start
 0. Activate conda, and ([optionally](#setup)) install mamba into your base environment: `conda install -c conda-forge mamba`
@@ -23,8 +24,8 @@ If the tests fail, contact the package administrator Claire Merker.
 ## Content
 The main functionalities of this package are:
 * reading
-  * GRIB data (and netcdf data, soon to come)
-  * unstructured and regular grids
+  * GRIB data
+  * unstructured (and regular grids for some features)
   * ensemble data
   * multiple runs/experiments
   * optional dask parallelisation available
@@ -34,19 +35,24 @@ The main functionalities of this package are:
   * nearest neighbour grid point to a lon/lat location
 * data processing
   * computation of average or maximum for the domain
+  * computation of temporal average for a model variable on a certain level
   * de-averaging/de-accumulation of aggregated quantities
 * plotting
   * time series visualisation for multiple runs
   * time series visualisation for ensemble data
   * histograms for value distributions
+  * temporal averages on a map
 
 The functions of the package can be used in scripts or via pre-defined command-line tools. Following command-line tools are provided:
 * `icon-timeseries meanmax`: time series of domain average and domain maximum of a model variable on a given level (can display multiple experiments, domains can be customised and added in `src/resources/domains.yaml`)
 * `icon-timeseries quicklook-domain`: map plot of the considered domain
 * `icon-timeseries nearest-neighbour`: time series of the values of a model variable at the grid point closest to the given location (can display multiple experiments)
 * `icon-timeseries histograms`: histograms of the values of a model variable (can display multiple experiments)
+* `icon-timeseries time-avg`: temporal average of the values of a model variable visualised on a map
 
 In order to use more than one dask worker for the parallelisation, the job needs to be send to the slurm queue (`postproc`). A script for `sbatch` containing an example call for `icon-timeseries meanmax` is provided: `sbatch.sh`
+
+_Warning:_ The support of data on regular lat/lon grids is not implemented for every feature, and is also not tested. Please use it with care! If a feature does not support data on a regular grid, it can probably be added easily. it might be worth to look at the code.
 
 ## Developing in icon-timeseries
 

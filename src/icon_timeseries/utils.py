@@ -1,7 +1,9 @@
 """Utils for data pre-processing."""
 # Standard library
 import logging
+import os
 import sys
+from datetime import datetime
 from typing import Dict
 from typing import List
 from typing import Tuple
@@ -9,6 +11,8 @@ from typing import Tuple
 # Third-party
 import numpy as np
 import xarray as xr
+from dask.distributed import Client
+from dask.distributed import LocalCluster
 
 # Local
 from .handle_grid import get_domain
@@ -128,7 +132,6 @@ def check_grid(
     varname: str,
     level: float | None = None,
     chunks: Dict[str, int] | None = None,
-    dask_nworkers: int | None = None,
 ) -> None:
     """Check if provided grid matches provided dataset."""
     logging.info("read grid file and check if grid is compatible")
@@ -139,7 +142,6 @@ def check_grid(
         level,
         parallel=True,
         chunks=chunks,
-        dask_nworkers=dask_nworkers,
     )
     if da.attrs["GRIB_gridType"] == "unstructured" and not grid:
         logging.error("the data grid is unstructured, please provide a grid file!")
@@ -158,3 +160,51 @@ def check_grid(
 
 
 # pylint: enable=too-many-arguments, duplicate-code
+
+
+def datetime64_to_hourlystr(date: np.datetime64) -> str:
+    """Convert a datetime64 object to a string with YYYY.MM.DD HH UTC."""
+    # datetime cannot handle nanosecond precision and seconds are enough here
+    datetime_date = date.astype("datetime64[s]").astype(datetime)
+    date_string = datetime_date.strftime("%Y.%m.%d %HUTC")
+    return date_string
+
+
+def start_dask_cluster(
+    dask_nworkers: int | None,
+) -> tuple[LocalCluster | None, Client | None]:
+    """Start a dask cluster with dask_nworkers number of workers."""
+    # only start dask cluster on compute nodes
+    if dask_nworkers and "ln" not in os.uname().nodename:
+        logging.info("job is running on %s, dask_nworkers active", os.uname().nodename)
+        logging.info("number of dask workers: %d", dask_nworkers)
+        cluster = LocalCluster()
+        cluster.scale(dask_nworkers)
+        client = Client(cluster)
+        logging.info("Dask cluster started! Dashboard at: %s", client.dashboard_link)
+    elif dask_nworkers and "ln" in os.uname().nodename:
+        logging.warning(
+            "job is running on %s, dask_nworkers is deactivated", os.uname().nodename
+        )
+        logging.warning("send your job on a post-proc node to activate dask_nworkers")
+        cluster = None
+        client = None
+    else:
+        logging.info("nothing to setup for dask, dask_nworkers=%s", dask_nworkers)
+        cluster = None
+        client = None
+
+    return cluster, client
+
+
+def stop_dask_cluster(
+    cluster: LocalCluster | None,
+    client: Client | None,
+):
+    """Close dask cluster and disconnect client."""
+    if client:
+        client.close()
+        logging.info("Dask client stopped!")
+    if cluster:
+        cluster.close()
+        logging.info("Dask cluster stopped!")
