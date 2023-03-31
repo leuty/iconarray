@@ -77,13 +77,6 @@ def main(ctx, **kwargs) -> None:
 )
 @click.option("--level", default=None, type=float, help="model level value")
 @click.option(
-    "--color",
-    default=None,
-    type=str,
-    multiple=True,
-    help="color to use for experiments in plot, used as specified",
-)
-@click.option(
     "--gridfile",
     default=None,
     type=str,
@@ -112,7 +105,6 @@ def meanmax(
     exp: Tuple[Tuple, ...],
     varname: str,
     level: float | None,
-    color: str | None,
     gridfile: str | None,
     domain: str,
     deagg: bool,
@@ -255,13 +247,6 @@ def nearest_neighbour(
 )
 @click.option("--level", default=None, type=float, help="model level value")
 @click.option(
-    "--color",
-    default=None,
-    type=str,
-    multiple=True,
-    help="color to use for experiments in plot, used as specified",
-)
-@click.option(
     "--gridfile",
     default=None,
     type=str,
@@ -313,7 +298,6 @@ def histograms(
     exp: Tuple[Tuple, ...],
     varname: str,
     level: float | None,
-    color: str | None,
     gridfile: str | None,
     domain: str,
     deagg: bool,
