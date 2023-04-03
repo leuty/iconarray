@@ -151,12 +151,11 @@ def check_grid(
         if not grid.check_compatibility(da):
             logging.error("grid and data are not compatible! size mismatch")
             sys.exit()
-    elif da.attrs["GRIB_gridType"] not in ["unstructured_grid", "rotated_ll"]:
-        logging.error(
-            "no support for domain selection on grid type %s",
+    else:
+        logging.info(
+            "nothing to check for grid type %s, no grid file needed.",
             da.attrs["GRIB_gridType"],
         )
-        sys.exit()
 
 
 # pylint: enable=too-many-arguments, duplicate-code
@@ -208,3 +207,10 @@ def stop_dask_cluster(
     if cluster:
         cluster.close()
         logging.info("Dask cluster stopped!")
+
+
+def check_and_fix_fname(fname: str):
+    """Make sure the string ends with .png."""
+    if not fname.endswith(".png"):
+        fname += ".png"
+    return fname

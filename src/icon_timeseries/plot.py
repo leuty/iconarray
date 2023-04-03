@@ -4,7 +4,6 @@ import logging
 import sys
 from typing import Any
 from typing import Dict
-from typing import List
 
 # Third-party
 import matplotlib  # type: ignore
@@ -16,14 +15,15 @@ from cartopy.crs import PlateCarree  # type: ignore
 
 # Local
 from .handle_grid import IconGrid
+from .utils import check_and_fix_fname
 
 
-# pylint: disable=too-many-locals
+# pylint: disable=too-many-locals, too-many-branches
 def plot_ts_multiple(
     da_dict: Dict[str, Dict[str, xr.DataArray]],
     domain: str | None = None,
-    colors: List[str] | None = None,
     save: bool = True,
+    fname: str = "",
 ) -> matplotlib.figure.Figure:
     """Plot the time series of parameters defined on a domain.
 
@@ -34,10 +34,10 @@ def plot_ts_multiple(
         dimension of the xarray.DataArray has to be 'time'
     domain : str, optional
         name of the domain for the plot title
-    colors : List[str], optional
-        List of (matplotlib) colors. Length must match number of experiments.
     save : bool, optional
         save the figure
+    fname : str, optional
+        name under which to store the output plot
 
     Returns
     -------
@@ -54,9 +54,8 @@ def plot_ts_multiple(
     for i, (p_key, p_val) in enumerate(da_dict.items()):
         e_val: xr.DataArray = xr.DataArray()  # pylint needs to have the loop variable
         exp_count = 0
-        if colors is None:
-            # Take the color sequence from a colormap
-            cmap = plt.cm.get_cmap("gist_rainbow", len(p_val) + 1)
+        # Take the color sequence from a colormap
+        cmap = plt.cm.get_cmap("gist_rainbow", len(p_val) + 1)
         logging.info("Number of Experiments: %i", len(p_val))
 
         # loop over runs/experiments
@@ -75,7 +74,7 @@ def plot_ts_multiple(
                 len_ens = 1
 
             if len_ens > 1:
-                logging.info("Looping over %i members.", e_val.number.shape[0])
+                logging.info("Looping over %i members.", len_ens)
                 plot_ensemble(e_key, e_val, axs[i], color)
             else:
                 vals = e_val.values
@@ -99,17 +98,20 @@ def plot_ts_multiple(
             ax.xaxis.set_ticklabels([])
 
     if save:
-        fname = f"timeseries_{e_val.name}_{'-'.join(da_dict.keys())}"
-        if hasattr(e_val, "level"):
-            fname += f"_l{e_val.level}"
-        fname += ".png"
+        if not fname:
+            fname = f"timeseries_{e_val.name}_{'-'.join(da_dict.keys())}"
+            if hasattr(e_val, "level"):
+                fname += f"_l{e_val.level}"
+            fname += ".png"
+        else:
+            fname = check_and_fix_fname(fname)
         plt.savefig(fname, bbox_inches="tight", dpi=300)
         logging.info("saved figure %s", fname)
 
     return fig
 
 
-# pylint: enable=too-many-locals
+# pylint: enable=too-many-locals, too-many-branches
 
 
 def plot_ts(
@@ -123,7 +125,7 @@ def plot_ts(
     """Plot a time series.
 
     Parameters
-    ----------x
+    ----------
     data : np.ndarray
         values
     times : np.ndarray
@@ -268,12 +270,14 @@ def plot_domain(
     return fig
 
 
+# pylint: disable=too-many-arguments
 def plot_on_map(
     data: xr.DataArray,
     gd: IconGrid,
     ax: matplotlib.axes.Axes | None = None,
     title: str | None = None,
     save: bool = False,
+    fname: str = "",
 ) -> tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
     """Plot data on a map.
 
@@ -290,6 +294,8 @@ def plot_on_map(
         provided
     save : bool, optional
         save the figure
+    fname : str, optional
+        name under which to store the output plot
 
     Returns
     -------
@@ -316,14 +322,20 @@ def plot_on_map(
 
     # save the figure
     if save:
-        fname = f"map_{data.name}"
-        if hasattr(data, "level"):
-            fname += f"_l{data.level}"
-        fname += ".png"
+        if not fname:
+            fname = f"map_{data.name}"
+            if hasattr(data, "level"):
+                fname += f"_l{data.level}"
+            fname += ".png"
+        else:
+            fname = check_and_fix_fname(fname)
         plt.savefig(fname, bbox_inches="tight", dpi=300)
         logging.info("saved figure %s", fname)
 
     return fig, ax
+
+
+# pylint: enable=too-many-arguments
 
 
 def _plot_map(
@@ -395,6 +407,7 @@ def plot_histograms(
     xlog: bool = False,
     ylog: bool = False,
     save: bool = True,
+    fname: str = "",
 ) -> tuple[matplotlib.figure.Figure, matplotlib.axes.Axes]:
     """Draw a histogram plot for a dataset over a given domain.
 
@@ -417,6 +430,8 @@ def plot_histograms(
         log. y-axis
     save : bool, optional
         save the figure
+    fname : str, optional
+        name under which to store the output plot
 
     Returns
     -------
@@ -477,10 +492,13 @@ def plot_histograms(
     fig.suptitle(title)
 
     if save:
-        fname = f"histograms_{e_val.name}_{'-'.join(da_dict.keys())}"
-        if hasattr(e_val, "level"):
-            fname += f"_l{e_val.level}"
-        fname += ".png"
+        if not fname:
+            fname = f"histograms_{e_val.name}_{'-'.join(da_dict.keys())}"
+            if hasattr(e_val, "level"):
+                fname += f"_l{e_val.level}"
+            fname += ".png"
+        else:
+            fname = check_and_fix_fname(fname)
         # fig.set_size_inches(4.0, 8.0)
         fig.savefig(fname, dpi=300)
         logging.info("saved figure %s", fname)

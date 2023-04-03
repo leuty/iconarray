@@ -77,13 +77,6 @@ def main(ctx, **kwargs) -> None:
 )
 @click.option("--level", default=None, type=float, help="model level value")
 @click.option(
-    "--color",
-    default=None,
-    type=str,
-    multiple=True,
-    help="color to use for experiments in plot, used as specified",
-)
-@click.option(
     "--gridfile",
     default=None,
     type=str,
@@ -101,6 +94,7 @@ def main(ctx, **kwargs) -> None:
     help="deagreggation of variable, method is detected from GRIB encoding "
     "(de-averaging and de-accumulation are currently implemented)",
 )
+@click.option("--outname", default="", type=str, help="name of the output plot")
 @click.option(
     "--dask-workers",
     "dask_nworkers",
@@ -112,10 +106,10 @@ def meanmax(
     exp: Tuple[Tuple, ...],
     varname: str,
     level: float | None,
-    color: str | None,
     gridfile: str | None,
     domain: str,
     deagg: bool,
+    outname: str,
     dask_nworkers: int | None,
 ):  # pylint: disable=too-many-arguments, too-many-locals
     """Read data for a variable from GRIB file(s) and plot a domain average and max."""
@@ -151,7 +145,7 @@ def meanmax(
         sys.exit()
 
     # plot the time series
-    plot_ts_multiple(da_dict, domain=domain)
+    plot_ts_multiple(da_dict, domain=domain, fname=outname)
 
     stop_dask_cluster(cluster, client)
 
@@ -190,6 +184,7 @@ def meanmax(
     help="deagreggation of variable, method is detected from GRIB encoding "
     "(de-averaging and de-accumulation are currently implemented)",
 )
+@click.option("--outname", default="", type=str, help="name of the output plot")
 @click.option(
     "--dask-workers",
     "dask_nworkers",
@@ -204,6 +199,7 @@ def nearest_neighbour(
     gridfile: str | None,
     lonlat: str,
     deagg: bool,
+    outname: str,
     dask_nworkers: int | None,
 ):  # pylint: disable=too-many-arguments
     """Plot a time series from GRIB data for given variables and coordinates."""
@@ -233,7 +229,7 @@ def nearest_neighbour(
         da_dict["values"][one_exp[1]] = da_point
 
     # plot the time series
-    plot_ts_multiple(da_dict, domain=lonlat)
+    plot_ts_multiple(da_dict, domain=lonlat, fname=outname)
 
     stop_dask_cluster(cluster, client)
 
@@ -254,13 +250,6 @@ def nearest_neighbour(
     "--varname", required=True, type=str, help="GRIB shortName of the variable"
 )
 @click.option("--level", default=None, type=float, help="model level value")
-@click.option(
-    "--color",
-    default=None,
-    type=str,
-    multiple=True,
-    help="color to use for experiments in plot, used as specified",
-)
 @click.option(
     "--gridfile",
     default=None,
@@ -302,6 +291,7 @@ def nearest_neighbour(
     type=bool,
     help="plot on y-logscale",
 )
+@click.option("--outname", default="", type=str, help="name of the output plot")
 @click.option(
     "--dask-workers",
     "dask_nworkers",
@@ -313,13 +303,13 @@ def histograms(
     exp: Tuple[Tuple, ...],
     varname: str,
     level: float | None,
-    color: str | None,
     gridfile: str | None,
     domain: str,
     deagg: bool,
     bins: Tuple[float, float, int],
     xlog: bool,
     ylog: bool,
+    outname: str,
     dask_nworkers: int | None,
 ):  # pylint: disable=too-many-arguments, too-many-locals
     """Read data for a variable from GRIB file(s) and plot the values distribution."""
@@ -358,6 +348,7 @@ def histograms(
         nbins=bins[2],
         xlog=xlog,
         ylog=ylog,
+        fname=outname,
     )
 
     stop_dask_cluster(cluster, client)
@@ -391,6 +382,7 @@ def histograms(
     help="deagreggation of variable, method is detected from GRIB encoding "
     "(de-averaging and de-accumulation are currently implemented)",
 )
+@click.option("--outname", default="", type=str, help="name of the output plot")
 @click.option(
     "--dask-workers",
     "dask_nworkers",
@@ -404,6 +396,7 @@ def time_avg(
     level: float | None,
     gridfile: str,
     deagg: bool,
+    outname: str,
     dask_nworkers: int | None,
 ):  # pylint: disable=too-many-arguments,
     """Read data for variable from GRIB file(s) and plot temporally averaged field."""
@@ -465,12 +458,7 @@ def time_avg(
         f"{dt2str(ds.time_bnds.values[0,1])}"
     )
 
-    _, _ = plot_on_map(
-        ds[varname],
-        gd,
-        title=title,
-        save=True,
-    )
+    _, _ = plot_on_map(ds[varname], gd, title=title, save=True, fname=outname)
 
     stop_dask_cluster(cluster, client)
 
