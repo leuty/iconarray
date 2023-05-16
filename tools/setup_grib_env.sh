@@ -1,5 +1,9 @@
 #!/bin/bash
 
+#Configuration
+ECCODES_VERSION="eccodes@2.19.0%gcc ~aec"
+COSMO_ECCODES_VERSION=cosmo-eccodes-definitions@2.19.0.7%gcc
+
 function check_python {
     python_version_l=$(python -c 'import sys; print(".".join(map(str, sys.version_info[:3])))')
     python_version_maj=$(python -c 'import sys; print(".".join(map(str, sys.version_info[0:1])))')
@@ -25,7 +29,7 @@ function check_python {
 
 function set_grib_definition_path {
 
-    cosmo_eccodes=$(spack find --format "{prefix}" cosmo-eccodes-definitions@2.19.0.7%gcc | head -n1)
+    cosmo_eccodes=$(spack find --format "{prefix}" $COSMO_ECCODES_VERSION | head -n1)
     if ! [[ -z "$cosmo_eccodes" ]]; then
         echo 'Cosmo eccodes-definitions were successfully retrieved.'
     else
@@ -33,7 +37,7 @@ function set_grib_definition_path {
         exit $1
     fi
 
-    eccodes=$(spack find --format "{prefix}" eccodes@2.19.0%gcc \~aec | head -n1)
+    eccodes=$(spack find --format "{prefix}" $ECCODES_VERSION | head -n1)
     if ! [[ -z "$eccodes" ]]; then
         echo 'Eccodes definitions were successfully retrieved.'
     else
@@ -59,6 +63,20 @@ elif [[ $(hostname -s) == *'daint'* ]]; then
     check_python
     source /project/g110/spack/user/admin-daint/spack/share/spack/setup-env.sh
     set_grib_definition_path
+
+elif [[ $(hostname -s) == balfrin* ]]; then
+  if ! command -v spack &> /dev/null; then
+    cd $SCRATCH
+    if [ ! -d spack-c2sm ]; then
+    echo "Installing spack to SCRATCH."
+      git clone --depth 1 --recurse-submodules --shallow-submodules -b v0.18.1.5 https://github.com/C2SM/spack-c2sm.git
+    fi
+    . spack-c2sm/setup-env.sh
+  fi
+  spack install $ECCODES_VERSION 
+  spack install $COSMO_ECCODES_VERSION
+  set_grib_definition_path
+
 fi
 
 
